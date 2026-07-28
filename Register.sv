@@ -6,7 +6,7 @@
 module Register(
     input clk,
     input rst_n,
-    input select, 
+    input select,        // !--Maybe a 3 bit address
 	input RW read_write, // 0:read 1:write
     input RegData data_in,
     output RegData data_out

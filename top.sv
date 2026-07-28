@@ -12,9 +12,11 @@ module top
 
     end
 
+	import ALU_Pkg::*;
+
 	logic clk_1Hz;
     ALU_Mode mode;
-	Register reg1, reg2, result;
+	RegData reg1, reg2, result;
 
 	to1Hz to1Hz_inst(
         .clk,

@@ -1,0 +1,44 @@
+parameter DATA_WIDTH = 8;
+parameter ADDR_WIDTH = 8;
+
+reg [DATA_WIDTH-1:0] bram [0:(1<<ADDR_WIDTH)-1];
+
+
+    DATA_WIDTH = 8 → Each memory word is 8 bits wide
+    ADDR_WIDTH = 8 → Address is 8 bits, allowing 2⁸ = 256 locations
+    [0:(1<<ADDR_WIDTH)-1] → Memory indices from 0 to 255
+
+
+    https://medium.com/@u22ec101/understanding-fpga-bram-simulating-initializing-and-dumping-memory-in-verilog-71105f2d10dd
+
+
+
+
+    use a hex memory file (.mem) and $readmemh to initialize BRAM:
+
+
+initial begin
+    if (MEM_INIT_FILE != "") begin
+        $readmemh(MEM_INIT_FILE, bram);
+    end
+end
+
+
+always @(posedge clk) begin
+    if (we) begin
+        bram[addr] <= din;    // write operation
+    end
+    dout <= bram[addr];       // synchronous read
+end
+
+
+    we = write enable
+    addr = address to read/write
+    din = data input
+    dout = data output
+
+
+    MEM_INIT_FILE
+
+
+    https://projectf.io/posts/initialize-memory-in-verilog/
