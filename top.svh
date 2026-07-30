@@ -2,6 +2,8 @@
 	`define TOP_SVH
 
 	typedef logic [7:0] RegData;
+	typedef logic [2:0] RegAddr;
+	typedef RegData Reg_array [0:7]; 
 
 	typedef enum logic {
 		READ = 1'b0,

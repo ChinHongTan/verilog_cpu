@@ -7,7 +7,7 @@ module BRAM (
 	input RAM_Data in,
 	output RAM_Data out
 );
-	RAM_Data bram [0:(1 << `ADDR_WIDTH)-1]; // there're 256 "RegData"
+	RAM_Data bram [0:(1 << `ADDR_WIDTH)-1]; // there're 256 "RAM_Data"
 
 	initial begin : init_bram
 		if (`MEM_INIT_FILE != "") begin

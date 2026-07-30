@@ -7,7 +7,7 @@
 			MUL  = 4'd3,  
 			DIV  = 4'd4,  
 			MOV  = 4'd5,  
-			JUP  = 4'd6,  
+			JMP  = 4'd6,  
 			JZ   = 4'd7,  
 			HALT = 4'd8,
             WRITE = 4'd9,
