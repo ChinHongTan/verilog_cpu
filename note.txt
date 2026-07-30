@@ -2,7 +2,7 @@ parameter DATA_WIDTH = 8;
 parameter ADDR_WIDTH = 8;
 
 reg [DATA_WIDTH-1:0] bram [0:(1<<ADDR_WIDTH)-1];
-
+[opcode - 4 bit][reg1Addr - 3 bit][reg2Addr - 3 bit]
 
     DATA_WIDTH = 8 → Each memory word is 8 bits wide
     ADDR_WIDTH = 8 → Address is 8 bits, allowing 2⁸ = 256 locations

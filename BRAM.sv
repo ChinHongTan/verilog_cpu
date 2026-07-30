@@ -12,6 +12,8 @@ module BRAM (
 	initial begin : init_bram
 		if (`MEM_INIT_FILE != "") begin
 			$readmemh(`MEM_INIT_FILE, bram);
+		end else begin
+			bram <= '{default: '0};
 		end
 	end
 

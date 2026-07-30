@@ -3,8 +3,6 @@
 
 # Format: [empty - 6 bit][opcode - 4 bit][regAddr1 - 3 bit][regAddr2 - 3 bit]
 
-
-
 from enum import IntEnum
 
 class Opcode(IntEnum):
@@ -34,11 +32,12 @@ with open("program.txt", "r", encoding="utf-8") as f:
         clean_line = lines.strip()
         if clean_line:
             args = clean_line.split() # ['ADD', 'R1', 'R2']
+            empty_bin = f"{0:06b}"
             opcode_bin = f"{Opcode[args[0]]:04b}" # 4 bit
             reg_bin_1 = f"{Register[args[1]]:03b}" # 3 bit
             reg_bin_2 = f"{Register[args[2]]:03b}" # 3 bit
 
-            compiled_instruction.append(f"{opcode_bin}{reg_bin_1}{reg_bin_2}")
+            compiled_instruction.append(f"{empty_bin}{opcode_bin}{reg_bin_1}{reg_bin_2}")
 
 print(compiled_instruction)
 

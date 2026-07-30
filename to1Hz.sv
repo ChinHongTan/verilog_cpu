@@ -10,10 +10,9 @@ module to1Hz(
             out <= 0;
         end else if (count >= 49_999_999) begin
             count <= 0;
-            out <= 1;
+            out <= ~out;
         end else begin
             count <= count + 1;
-            out <= 0;
         end
     end
 endmodule
