@@ -5,7 +5,7 @@
 module control_unit(
     input clk,
 	input rst_n,
-    input state_t state,
+    input FSM_State_Pkg::state_t state,
     input operation_t opcode,
     output ALU_Pkg::ALU_Mode alu_op
 );

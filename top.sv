@@ -7,7 +7,7 @@
 module top(
 	input clk,
     input [15:0] sw,
-    output [15:0] led,
+    output logic [15:0] led,
     output [7:0] seg,
     output [3:0] an
 );
@@ -24,11 +24,12 @@ module top(
     RW write_enable;
     logic [7:0] RAM_addr; // pc
 
-    to1Hz to1Hz_inst(
-        .clk,
-		.rst_n,
-		.out(clk_1Hz)
-    );
+    //to1Hz to1Hz_inst(
+    //    .clk,
+	//	.rst_n,
+	//	.out(clk_1Hz)
+    //);
+    assign clk_1Hz = clk;
 
     RegData data_in;
     Registers TODO (
@@ -81,14 +82,14 @@ module top(
 
     logic isAddr1 = address1[3];
     logic isAddr2 = address2[3];
-    always_ff @(posedge clk, negedge rst_n) begin : Main_FSM
+    always_ff @(posedge clk_1Hz, negedge rst_n) begin : Main_FSM
         write_enable <= READ;
         address_write <= 0;
         data_in <= 0;
         if (!rst_n) begin
-            RAM_addr <= 0;
             address1 <= 0;
             address2 <= 0;
+            RAM_addr <= 0;
             ALU_op <= 0;
             state <= IDLE;
         end else if (!pause) case (state)
@@ -135,6 +136,7 @@ module top(
                                 data_in <= {5'b0, address2[2:0]};
                             end
                         end
+                        state <= FETCH;
                     end
 
                     default: begin
