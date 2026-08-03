@@ -22,8 +22,8 @@
 		OP_SUB = 4'b0010,
 		OP_MUL = 4'b0011,
 		OP_DIV = 4'b0100,
-        OP_STORE = 4'b0101,
-        OP_LOAD = 4'b0110,
-        OP_LOADI = 4'b0111
+		OP_STORE = 4'b1001,
+		OP_LOAD = 4'b1010,
+		OP_LOADI = 4'b1011
 	} operation_t;
 `endif

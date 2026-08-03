@@ -80,10 +80,10 @@ module top(
     operation_t opcode;
     logic ALU_op;
 
-    logic isAddr1 = address1[3];
+    logic isAddr1 = 1; //TODO address1[3] is always seen as false, so It's set to 1 for temp
     logic isAddr2 = address2[3];
     always_ff @(posedge clk_1Hz, negedge rst_n) begin : Main_FSM
-        write_enable <= READ;
+        //write_enable <= READ;
         address_write <= 0;
         data_in <= 0;
         if (!rst_n) begin
@@ -130,7 +130,6 @@ module top(
                             write_enable <= WRITE;
                             address_write <= address1[2:0];
                             if (isAddr2) begin : REG2_IS_ADDRESS
-                                write_enable <= WRITE;
                                 data_in <= regData2;
                             end else begin : REG2_IS_NUMBER
                                 data_in <= {5'b0, address2[2:0]};
