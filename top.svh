@@ -3,6 +3,7 @@
 
 	typedef logic [7:0] RegData;
 	typedef logic [2:0] RegAddr;
+	typedef logic [3:0] RegAddrNum;
 	typedef RegData Reg_array [0:7]; 
 
 	typedef enum logic {
@@ -21,7 +22,8 @@
 		OP_SUB = 4'b0010,
 		OP_MUL = 4'b0011,
 		OP_DIV = 4'b0100,
-        OP_WRITE = 4'b0101,
-        OP_READ = 4'b0110
+        OP_STORE = 4'b0101,
+        OP_LOAD = 4'b0110,
+        OP_LOADI = 4'b0111
 	} operation_t;
 `endif

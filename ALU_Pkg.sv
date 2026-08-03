@@ -7,5 +7,10 @@
 			MUL = 3'b010,
 			DIV = 3'b011
 		} ALU_Mode;
+
+		typedef enum logic [0:0] {
+			ALU_IDLE = 1'b0,
+			ALU_DONE = 1'b1
+		} ALU_state_t;
 	endpackage
 `endif
