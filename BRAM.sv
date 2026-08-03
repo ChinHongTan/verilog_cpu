@@ -1,4 +1,4 @@
-`include "top.svh";
+`include "top.svh"
 
 module BRAM (
     input clk,

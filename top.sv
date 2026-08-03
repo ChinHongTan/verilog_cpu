@@ -1,7 +1,7 @@
-`include "top.svh";
-`include "IR_Pkg.sv";
-`include "ALU_Pkg.sv";
-`include "FSM_State_Pkg.sv";
+`include "top.svh"
+`include "IR_Pkg.sv"
+`include "ALU_Pkg.sv"
+`include "FSM_State_Pkg.sv"
 
 
 module top(

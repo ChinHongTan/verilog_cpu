@@ -1,4 +1,4 @@
-`include "top.svh";
+`include "top.svh"
 
 module Registers( // double IO
     input clk,
