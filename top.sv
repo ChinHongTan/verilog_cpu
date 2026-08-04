@@ -13,9 +13,10 @@ module top(
 );
     import FSM_State_Pkg::*;
 
+    wire rst_n = sw[0];
+    wire pause = sw[15];
+
 	logic clk_1Hz;
-    logic rst_n = sw[0];
-    logic pause = sw[15];
     ALU_Pkg::ALU_Mode ALU_mode;
 	RegData regData1, regData2;
     RegData ALU_Data1, ALU_Data2, result;
@@ -24,12 +25,12 @@ module top(
     RW write_enable;
     logic [7:0] RAM_addr; // pc
 
-    //to1Hz to1Hz_inst(
-    //    .clk,
-	//	.rst_n,
-	//	.out(clk_1Hz)
-    //);
-    assign clk_1Hz = clk;
+    to1Hz to1Hz_inst(
+        .clk,
+		.rst_n,
+		.out(clk_1Hz)
+    );
+    //assign clk_1Hz = clk;
 
     RegData data_in;
     Registers TODO (
@@ -68,7 +69,7 @@ module top(
         .clk,
         .rst_n,
         .in3(4'(regData1 % 10)),
-        .in2(4'(regData2 / 10)),
+        .in2(4'(regData2 % 10)),
         .in1(4'(data_in / 10)),
         .in0(4'(data_in % 10)),
         .dp(4'b0000),
@@ -80,10 +81,10 @@ module top(
     operation_t opcode;
     logic ALU_op;
 
-    logic isAddr1 = 1; //TODO address1[3] is always seen as false, so It's set to 1 for temp
-    logic isAddr2 = address2[3];
+    wire isAddr1 = address1[3];
+    wire isAddr2 = address2[3];
     always_ff @(posedge clk_1Hz, negedge rst_n) begin : Main_FSM
-        //write_enable <= READ;
+        write_enable <= READ;
         address_write <= 0;
         data_in <= 0;
         if (!rst_n) begin
@@ -126,6 +127,7 @@ module top(
 
                     //end
                     OP_LOADI: begin
+                        led[12] <= 1'b1;
                         if (isAddr1) begin
                             write_enable <= WRITE;
                             address_write <= address1[2:0];
@@ -142,7 +144,6 @@ module top(
                         state <= FETCH;
                     end
                 endcase
-                // TODO if (done) state <= FETCH;
             end
             default: begin
                 state <= IDLE;
@@ -150,9 +151,8 @@ module top(
         endcase
     end
 
-
-    assign ALU_Data1 = (address1[3]) ? regData1 : {5'b0, address1[2:0]};
-    assign ALU_Data2 = (address2[3]) ? regData2 : {5'b0, address2[2:0]};
+    assign ALU_Data1 = (isAddr1) ? regData1 : {5'b0, address1[2:0]};
+    assign ALU_Data2 = (isAddr2) ? regData2 : {5'b0, address2[2:0]};
     ALU alu_inst (
         .clk(clk_1Hz),
         .rst_n,
