@@ -16,7 +16,7 @@ module top(
     ALU_Pkg::ALU_Mode ALU_mode;
 	RegData regData1, regData2;
     RegData ALU_Data1, ALU_Data2, result;
-    RegAddrNum address1, address2; 
+    RegAddrNum address1, address2;
     RegAddr address_write; // NEVER be number
     RW write_enable;
     logic [7:0] RAM_addr; // pc
@@ -79,7 +79,7 @@ module top(
             in2 <= 4'b0;
             in1 <= 4'b0;
             in0 <= 4'b0;
-        end else if (ALU_state == ALU_Pkg::ALU_DONE) begin
+        end else if (opcode == OP_ADD && ALU_state == ALU_Pkg::ALU_DONE) begin
             in3 <= 4'(result / 1000 % 10);
             in2 <= 4'(result / 100 % 10);
             in1 <= 4'(result / 10 % 10);
@@ -90,6 +90,7 @@ module top(
     ALU_Pkg::ALU_state_t ALU_state;
     operation_t opcode;
     logic ALU_op;
+    logic wait_jump;
 
     wire isAddr1 = address1[3];
     wire isAddr2 = address2[3];
@@ -102,6 +103,7 @@ module top(
         write_enable <= READ;
         address_write <= 0;
         data_in <= 0;
+        wait_jump <= 0;
         if (!rst_n) begin
             address1 <= 0;
             address2 <= 0;
@@ -152,13 +154,15 @@ module top(
                     end
                     OP_JMP: begin
                         RAM_addr <= ALU_Data1;
-                        state <= FETCH;
+                        if (wait_jump == 1) state <= FETCH;
+                        else wait_jump <= wait_jump + 1;
                     end
                     OP_JZ: begin
-                        if (regData1 == 0) begin
+                        if (regData1 != 0) begin
                             RAM_addr <= ALU_Data2;
                         end
-                        state <= FETCH;
+                        if (wait_jump == 1) state <= FETCH;
+                        else wait_jump <= wait_jump + 1;
                     end
                     OP_HALT: begin
                         state <= HALT;
@@ -167,7 +171,6 @@ module top(
                     //end
                     //OP_LOAD: begin
                     //end
-                    
 
                     default: begin
                         state <= FETCH;

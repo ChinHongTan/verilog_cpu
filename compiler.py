@@ -61,7 +61,7 @@ with open("program.txt", "r", encoding="utf-8") as f:
             continue
 
         if clean_line.endswith(":"):
-            label_name[clean_line[:-1]] = line_num + 2
+            label_name[clean_line[:-1]] = line_num
             continue
 
         line_num += 1

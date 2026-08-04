@@ -1,4 +1,5 @@
 `timescale 1ns / 1ps
+`include "top.sv"
 
 module CPU_tb;
     logic clk;
@@ -22,6 +23,6 @@ module CPU_tb;
         clk = 1'b1;
         sw = 16'b1;
 
-        #100 $finish;
+        #2000 $finish;
     end
 endmodule
