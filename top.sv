@@ -74,7 +74,12 @@ module top(
         .SSD(seg)
     );
     always_ff @(posedge clk_1Hz, negedge rst_n) begin : seg_control // MARK: SEG_CONTROL
-        if (ALU_state == ALU_Pkg::ALU_DONE) begin
+        if (!rst_n) begin
+            in3 <= 4'b0;
+            in2 <= 4'b0;
+            in1 <= 4'b0;
+            in0 <= 4'b0;
+        end else if (ALU_state == ALU_Pkg::ALU_DONE) begin
             in3 <= 4'(result / 1000 % 10);
             in2 <= 4'(result / 100 % 10);
             in1 <= 4'(result / 10 % 10);
