@@ -157,7 +157,7 @@ module top(
                         if (wait_jump == 1) state <= FETCH;
                         else wait_jump <= wait_jump + 1;
                     end
-                    OP_JZ: begin
+                    OP_JNZ: begin
                         if (regData1 != 0) begin
                             RAM_addr <= ALU_Data2;
                         end

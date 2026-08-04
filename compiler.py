@@ -11,19 +11,21 @@ class Opcode(IntEnum):
     MUL = 3
     DIV = 4
     JMP = 5
-    JZ = 6          # Jump if the register is zero, e.g. JZ R3 ADD_SECTION
+    JNZ = 6          # Jump if the register is zero, e.g. JZ R3 ADD_SECTION
     HALT = 7
     STORE = 8       # Save to RAM
     LOAD = 9
     LOADI = 10      # Save to register with an immediate number, e.g. LOADI R0 2
 
 class Register(IntEnum):
-    R0 = 1
-    R1 = 2
-    R2 = 3
-    R3 = 4
-    R4 = 5
-    R5 = 6
+    R0 = 0
+    R1 = 1
+    R2 = 2
+    R3 = 3
+    R4 = 4
+    R5 = 5
+    R6 = 6
+    R7 = 7
 
 compiled_instruction = []
 

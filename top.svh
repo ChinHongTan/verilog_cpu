@@ -28,7 +28,7 @@
 		OP_MUL   = 4'b0011,
 		OP_DIV   = 4'b0100,
         OP_JMP   = 4'b0101,
-        OP_JZ    = 4'b0110,
+        OP_JNZ    = 4'b0110,
         OP_HALT  = 4'b0111,
         OP_STORE = 4'b1000,
         OP_LOAD  = 4'b1001,
