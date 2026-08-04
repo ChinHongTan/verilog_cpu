@@ -83,7 +83,9 @@ module top(
 
     wire isAddr1 = address1[3];
     wire isAddr2 = address2[3];
+    assign led[11:0] = {opcode, address1, address2}; // show current ir
     always_ff @(posedge clk_1Hz, negedge rst_n) begin : Main_FSM
+        led[15:12] <= 4'b0;
         write_enable <= READ;
         address_write <= 0;
         data_in <= 0;
@@ -98,6 +100,7 @@ module top(
                 state <= FETCH;
             end
             FETCH: begin : save_ir
+                led[15] <= 1'b1;
                 opcode   <= operation_t'(command[11:8]);
                 address1 <= command[7:4];
                 address2 <= command[3:0];
@@ -105,8 +108,10 @@ module top(
                 state    <= EXECUTE;
             end
             EXECUTE: begin //TODO ALU & EXECUTE 協調部分
+                led[14] <= 1'b1;
                 case (opcode)
                     OP_ADD, OP_SUB, OP_MUL, OP_DIV: begin : ALU_Operation
+                        led[13] <= 1'b1;
                         if (ALU_state == ALU_Pkg::ALU_DONE) begin
                             if (isAddr1) begin
                                 write_enable <= WRITE;
