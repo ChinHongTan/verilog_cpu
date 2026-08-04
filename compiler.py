@@ -61,7 +61,7 @@ with open("program.txt", "r", encoding="utf-8") as f:
             continue
 
         if clean_line.endswith(":"):
-            label_name[clean_line[:-1]] = line_num + 1
+            label_name[clean_line[:-1]] = line_num + 2
             continue
 
         line_num += 1
@@ -82,8 +82,10 @@ with open("program.txt", "r", encoding="utf-8") as f:
         args = clean_line.split() # ['ADD', 'R1', 'R2']
 
         if args[0] == 'JZ':
-            arg2 = label_name.get(args[2], None)
-            if not arg2:
+            print("Label name:", label_name)
+            arg2 = args[1]
+            arg3 = label_name.get(args[2], None)
+            if not arg3:
                 raise ValueError(f"Label {args[2]} not found.")
         elif args[0] == 'JMP':
             arg2 = label_name.get(args[1], None)
@@ -93,6 +95,7 @@ with open("program.txt", "r", encoding="utf-8") as f:
             arg2 = args[1]
             arg3 = args[2]
 
+        print("Encoding:", args[0], arg2, arg3)
         encode(args[0], arg2, arg3)
 
 print(compiled_instruction)
