@@ -1,8 +1,4 @@
 `include "top.svh"
-`include "IR_Pkg.sv"
-`include "ALU_Pkg.sv"
-`include "FSM_State_Pkg.sv"
-
 
 module top(
 	input clk,
@@ -65,17 +61,26 @@ module top(
         .alu_op(ALU_mode)
     );
 
+    logic [3:0] in3, in2, in1, in0;
     seg_four seg_four_inst(
         .clk,
         .rst_n,
-        .in3(4'(regData1 % 10)),
-        .in2(4'(regData2 % 10)),
-        .in1(4'(data_in / 10)),
-        .in0(4'(data_in % 10)),
+        .in3,
+        .in2,
+        .in1,
+        .in0,
         .dp(4'b0000),
         .an,
         .SSD(seg)
     );
+    always_ff @(posedge clk_1Hz, negedge rst_n) begin : seg_control // MARK: SEG_CONTROL
+        if (ALU_state == ALU_Pkg::ALU_DONE) begin
+            in3 <= 4'(result / 1000 % 10);
+            in2 <= 4'(result / 100 % 10);
+            in1 <= 4'(result / 10 % 10);
+            in0 <= 4'(result % 10);
+        end
+    end
 
     ALU_Pkg::ALU_state_t ALU_state;
     operation_t opcode;
@@ -83,8 +88,11 @@ module top(
 
     wire isAddr1 = address1[3];
     wire isAddr2 = address2[3];
+    assign ALU_Data1 = (isAddr1) ? regData1 : {5'b0, address1[2:0]};
+    assign ALU_Data2 = (isAddr2) ? regData2 : {5'b0, address2[2:0]};
+
     assign led[11:0] = {opcode, address1, address2}; // show current ir
-    always_ff @(posedge clk_1Hz, negedge rst_n) begin : Main_FSM
+    always_ff @(posedge clk_1Hz, negedge rst_n) begin : Main_FSM // MARK: MAIN
         led[15:12] <= 4'b0;
         write_enable <= READ;
         address_write <= 0;
@@ -124,13 +132,6 @@ module top(
                             ALU_op <= 1;
                         end
                     end
-                    //OP_LOAD: begin
-
-                    //end
-
-                    //OP_STORE: begin
-
-                    //end
                     OP_LOADI: begin
                         led[12] <= 1'b1;
                         if (isAddr1) begin
@@ -144,20 +145,36 @@ module top(
                         end
                         state <= FETCH;
                     end
+                    OP_JMP: begin
+                        RAM_addr <= ALU_Data1;
+                        state <= FETCH;
+                    end
+                    OP_JZ: begin
+                        if (regData1 == 0) begin
+                            RAM_addr <= ALU_Data2;
+                        end
+                        state <= FETCH;
+                    end
+                    OP_HALT: begin
+                        state <= HALT;
+                    end
+                    //OP_STORE: begin
+                    //end
+                    //OP_LOAD: begin
+                    //end
+                    
 
                     default: begin
                         state <= FETCH;
                     end
                 endcase
             end
-            default: begin
-                state <= IDLE;
+            HALT: begin
+                state <= HALT; // stay in HALT state
             end
         endcase
     end
 
-    assign ALU_Data1 = (isAddr1) ? regData1 : {5'b0, address1[2:0]};
-    assign ALU_Data2 = (isAddr2) ? regData2 : {5'b0, address2[2:0]};
     ALU alu_inst (
         .clk(clk_1Hz),
         .rst_n,

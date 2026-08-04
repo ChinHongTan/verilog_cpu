@@ -10,13 +10,12 @@ class Opcode(IntEnum):
     SUB = 2
     MUL = 3
     DIV = 4
-    MOV = 5
-    JMP = 6
-    JZ = 7          # Jump if the register is zero, e.g. JZ R3 ADD_SECTION
-    HALT = 8
-    STORE = 9       # Save to RAM
-    LOAD = 10
-    LOADI = 11      # Save to register with an immediate number, e.g. LOADI R0 2
+    JMP = 5
+    JZ = 6          # Jump if the register is zero, e.g. JZ R3 ADD_SECTION
+    HALT = 7
+    STORE = 8       # Save to RAM
+    LOAD = 9
+    LOADI = 10      # Save to register with an immediate number, e.g. LOADI R0 2
 
 class Register(IntEnum):
     R0 = 1
@@ -27,6 +26,16 @@ class Register(IntEnum):
     R5 = 6
 
 compiled_instruction = []
+
+def encode(code, arg2, arg3):
+    print(code, arg2, arg3)
+    empty_bin = f"{0:04b}" # 4 empty bit
+    opcode_bin = f"{Opcode[code]:04b}" # 4 bit
+
+    reg_bin_1 = parse_operand(arg2) # 3 bit
+    reg_bin_2 = parse_operand(arg3) # 3 bit
+
+    compiled_instruction.append(f"{empty_bin}{opcode_bin}{reg_bin_1}{reg_bin_2}")
 
 def parse_operand(arg: str) -> str:
     # Try as Register
@@ -43,19 +52,48 @@ def parse_operand(arg: str) -> str:
         raise ValueError(f"Invalid operand {arg}: must be a valid Register or number.") from e
 
 with open("program.txt", "r", encoding="utf-8") as f:
+    label_name = {}
+    line_num = 0
     for lines in f:
+
         clean_line = lines.strip()
         if not clean_line:
             continue
 
+        if clean_line.endswith(":"):
+            label_name[clean_line[:-1]] = line_num + 1
+            continue
+
+        line_num += 1
+
+    f.seek(0)
+
+    for lines in f:
+        arg2 = 0
+        arg3 = 0
+        clean_line = lines.strip()
+        print(clean_line)
+        if not clean_line:
+            continue
+
+        if clean_line.endswith(":"):
+            continue
+
         args = clean_line.split() # ['ADD', 'R1', 'R2']
-        empty_bin = f"{0:04b}" # 4 empty bit
-        opcode_bin = f"{Opcode[args[0]]:04b}" # 4 bit
 
-        reg_bin_1 = parse_operand(args[1]) # 3 bit
-        reg_bin_2 = parse_operand(args[2]) # 3 bit
+        if args[0] == 'JZ':
+            arg2 = label_name.get(args[2], None)
+            if not arg2:
+                raise ValueError(f"Label {args[2]} not found.")
+        elif args[0] == 'JMP':
+            arg2 = label_name.get(args[1], None)
+            if not arg2:
+                raise ValueError(f"Label {args[1]} not found.")
+        elif args[0] != 'HALT':
+            arg2 = args[1]
+            arg3 = args[2]
 
-        compiled_instruction.append(f"{empty_bin}{opcode_bin}{reg_bin_1}{reg_bin_2}")
+        encode(args[0], arg2, arg3)
 
 print(compiled_instruction)
 

@@ -14,7 +14,7 @@ module CPU_tb;
         .seg(seg),
         .an(an)
     );
-    always #5 clk = ~clk;
+    always #5 clk <= ~clk;
 
     initial begin
         $dumpfile("wave.vcd"); 

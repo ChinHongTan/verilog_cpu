@@ -1,6 +1,4 @@
 `include "top.svh"
-`include "ALU_Pkg.sv"
-`include "FSM_State_Pkg.sv"
 
 module control_unit(
     input clk,

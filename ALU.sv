@@ -1,5 +1,4 @@
 `include "top.svh"
-`include "ALU_Pkg.sv"
 
 module ALU 
     import ALU_Pkg::*;
