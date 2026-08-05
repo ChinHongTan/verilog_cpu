@@ -30,9 +30,9 @@ class Register(IntEnum):
     R6 = 6
     R7 = 7
 
-compiled_instruction = []
+compiled_instruction: list[str] = []
 
-def encode(code, arg1, arg2):
+def encode(code: str, arg1: int | str, arg2: int | str) -> None:
     print(code, arg1, arg2)
     empty_bin = f"{0:04b}" # 4 empty bit
     opcode_bin = f"{Opcode[code]:04b}" # 4 bit
@@ -42,9 +42,9 @@ def encode(code, arg1, arg2):
 
     compiled_instruction.append(f"{empty_bin}{opcode_bin}{reg_bin_1}{reg_bin_2}")
 
-def parse_operand(arg: str) -> str:
+def parse_operand(arg: int | str) -> str:
     # Try as Register
-    if arg in Register.__members__:
+    if isinstance(arg, str) and arg in Register.__members__:
         reg_val = Register[arg].value
         return f"1{reg_val:03b}"
 
@@ -58,9 +58,9 @@ def parse_operand(arg: str) -> str:
     return f"0{num:03b}"
 
 with open("program.txt", "r", encoding="utf-8") as f:
-    label_name = {}
+    label_name: dict[str, int] = {}
     line_num = 0
-    temp_instructions = []
+    temp_instructions: list[list[str]] = []
     for lines in f:
         clean_line = lines.strip().split(";", 1)[0] # Remove comments
         clean_line = clean_line.strip() # strip again to remove white spaces between comment and code
@@ -102,7 +102,7 @@ with open("program.txt", "r", encoding="utf-8") as f:
             arg1 = temp_instruction[1]
             arg2 = temp_instruction[2]
         else:
-            raise SyntaxError("Unknown opcode", opcode)
+            raise SyntaxError(f"Unknown opcode: {opcode}")
 
         encode(opcode, arg1, arg2)
 
