@@ -36,7 +36,7 @@ module seg_four(
     always @(*) begin
         if (!rst_n) begin
             an = 4'b1111; // 全滅
-            current_val = 4'b1111;
+            current_val = 4'b1010;
         end else case(scan_cnt)
             2'b00: begin an = 4'b1110; current_val = in0; end // 亮最右邊，吃 in0
             2'b01: begin an = 4'b1101; current_val = in1; end // 亮右二，吃 in1

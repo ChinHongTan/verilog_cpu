@@ -1,7 +1,7 @@
 # Input Instruction
 # Output bin data
 
-# Format: [empty - 4 bit][opcode - 4 bit][regAddr1 - 4 bit][regAddr2 - 4 bit]
+# Format: [opcode - 5][arg1 - 9][arg2 - 9][arg3 - 9]
 # Instruction format:
 # [OPCODE][ARG1][ARG2]
 
@@ -9,16 +9,19 @@ from enum import IntEnum
 import re
 
 class Opcode(IntEnum):
-    ADD = 1
-    SUB = 2
-    MUL = 3
-    DIV = 4
-    JMP = 5
-    JNZ = 6         # Jump if the register is zero, e.g. JZ R3 ADD_SECTION
-    HALT = 7
+    ADD   = 1
+    SUB   = 2
+    MUL   = 3
+    DIV   = 4
+    JMP   = 5
+    JNZ   = 6         # Jump if the register is zero, e.g. JZ R3 ADD_SECTION
+    HALT  = 7
     STORE = 8       # Save to RAM
-    LOAD = 9
+    LOAD  = 9
     LOADI = 10      # Save to register with an immediate number, e.g. LOADI R0 2
+    MOV   = 11
+    JAL	  = 12
+    JMPR  = 13
 
 class Register(IntEnum):
     R0 = 0
@@ -30,32 +33,63 @@ class Register(IntEnum):
     R6 = 6
     R7 = 7
 
+
+INSTRUCTION_FORMATS = {
+    "ADD":      [3, 3, 3],       # [3 bit reg, 3 bit reg, 3 bit reg]
+    "SUB":      [3, 3, 3],       # [3 bit reg, 3 bit reg, 3 bit reg]
+    "MUL":      [3, 3, 3],       # [3 bit reg, 3 bit reg, 3 bit reg]
+    "DIV":      [3, 3, 3],       # [3 bit reg, 3 bit reg, 3 bit reg]
+    "JMP":      [16],            # [16 bit label]
+    "JNZ":      [3, 16],         # [3 bit reg, 16 bit label]
+    "HALT":     [],              # 0 args
+    "STORE":    [3, 16],         # [3 bit reg, 16 bit BRAM]
+    "LOAD":     [3, 16],         # [3 bit reg, 16 bit BRAM]
+    "LOADI":    [3, 16],         # [3 bit reg, 16 bit literal]
+    "MOV":      [3, 3],          # [3 bit reg, 3 bit reg]
+    "JAL":      [3, 16],         # [3 bit reg, 16 bit literal]
+    "JMPR":     [3]              # [3 bit reg]
+}
+
 compiled_instruction: list[str] = []
 
-def encode(code: str, arg1: int | str, arg2: int | str) -> None:
-    print(code, arg1, arg2)
-    empty_bin = f"{0:04b}" # 4 empty bit
-    opcode_bin = f"{Opcode[code]:04b}" # 4 bit
+def encode(code: str, arg1: int | str | None = None, arg2: int | str | None = None, arg3: int | str | None = None) -> None:
+    print(code, arg1, arg2, arg3)
+    bit_stream = ""
+    opcode_bin = f"{Opcode[code]:05b}" # 5 bit
+    bit_stream += opcode_bin
 
-    reg_bin_1 = parse_operand(arg1) # 3 bit
-    reg_bin_2 = parse_operand(arg2) # 3 bit
+    widths = INSTRUCTION_FORMATS[code]
+    args: list[int | str] = []
+    for a in (arg1, arg2, arg3):
+        if a is not None:
+            args.append(a)
 
-    compiled_instruction.append(f"{empty_bin}{opcode_bin}{reg_bin_1}{reg_bin_2}")
+    for i in range(len(args)):
+        val = args[i]  # ADD R0 R1 R2 | LOADI R0 1000 | STORE R0 12
+        width = widths[i]
 
-def parse_operand(arg: int | str) -> str:
+        bit_stream += parse_operand(val, width)
+        print(f"Value {val} gets {width} bits")
+
+    bit_stream = bit_stream.ljust(32, "0") # fill 0 in the end
+    compiled_instruction.append(bit_stream)
+
+
+def parse_operand(arg: int | str, width: int) -> str:
+    """"Turn string code into binary in string form | e.g. ADD = 1 = 00001"""
     # Try as Register
     if isinstance(arg, str) and arg in Register.__members__:
         reg_val = Register[arg].value
-        return f"1{reg_val:03b}"
+        return f"{reg_val:0{width}b}"
 
     try:
         num = int(arg)
     except ValueError as e:
         raise ValueError(f"Invalid operand {arg}: must be a valid Register or number.") from e
 
-    if not (0 <= num <= 7):
+    if not (0 <= num <= (2**width) - 1): # (1 << width) - 1 
         raise ValueError(f"Immediate value {num} out of range.")
-    return f"0{num:03b}"
+    return f"{num:0{width}b}"
 
 with open("program.txt", "r", encoding="utf-8") as f:
     label_name: dict[str, int] = {}
@@ -82,29 +116,37 @@ with open("program.txt", "r", encoding="utf-8") as f:
     for temp_instruction in temp_instructions:
 
         opcode = temp_instruction[0]
-        arg1 = 0
-        arg2 = 0
+        arg1 = None
+        arg2 = None
+        arg3 = None
 
         if opcode == 'HALT':
             pass
         elif opcode == 'JMP':
             # expect label in arg1
-            arg1 = label_name.get(temp_instruction[1], None)
-            if arg1 == None:
+            arg1 = "R0" # 3 bit padding for verilog
+            arg2 = label_name.get(temp_instruction[1], None)
+            if arg2 == None:
                 raise ValueError(f"Label {temp_instruction[1]} not found.")
         elif opcode == 'JNZ':
             # expect label in arg2
-            arg1 = temp_instruction[1]
-            arg2 = label_name.get(temp_instruction[2], None)
+            arg1 = temp_instruction[1] # reg addr - 3 bit
+            arg2 = label_name.get(temp_instruction[2], None) # label - 16 bit
             if arg2 == None:
                 raise ValueError(f"Label {temp_instruction[2]} not found.")
-        elif opcode in ('ADD', 'SUB', 'MUL', 'DIV', 'LOADI', 'LOAD', 'STORE'):
+        elif opcode in ('ADD', 'SUB', 'MUL', 'DIV'): # ALU, 3 args
             arg1 = temp_instruction[1]
             arg2 = temp_instruction[2]
+            arg3 = temp_instruction[3]
+        elif opcode in ('LOADI', 'LOAD', 'STORE', 'MOV', 'JAL'): # 2 args
+            arg1 = temp_instruction[1]
+            arg2 = temp_instruction[2]
+        elif opcode == 'JMPR':
+            arg1 = temp_instruction[1]
         else:
             raise SyntaxError(f"Unknown opcode: {opcode}")
 
-        encode(opcode, arg1, arg2)
+        encode(opcode, arg1, arg2, arg3)
 
 print(compiled_instruction)
 

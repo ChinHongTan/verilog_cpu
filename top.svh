@@ -6,34 +6,44 @@
 	`include "ALU_Pkg.sv"
 	`include "FSM_State_Pkg.sv"
 
-	typedef logic [7:0] RegData;
-	typedef logic [2:0] RegAddr;
-	typedef logic [3:0] RegAddrNum;
-	typedef RegData Reg_array [0:7]; 
+	// MARK: Registers
+	`define REG_ADDR 3
+	`define REG_WIDTH 16
+
+	typedef logic [`REG_WIDTH - 1:0] RegData;
+	typedef logic [`REG_ADDR - 1:0] RegAddr;
+	typedef RegData Reg_array [0:(1 << `REG_ADDR) - 1]; 
 
 	typedef enum logic {
 		READ  = 1'b0,
 		WRITE = 1'b1
 	} RW;
-	
+
+	// MARK: RAM
 	`define ADDR_WIDTH 8
 	`define DATA_WIDTH 32
 	`define MEM_INIT_FILE "ex1.mem"
 
 	typedef logic [`DATA_WIDTH - 1:0] RAM_Data;	
+	typedef logic [`ADDR_WIDTH - 1:0] RAM_Address;
 
-	typedef enum logic [3:0] {
-		OP_ADD   = 4'b0001,
-		OP_SUB   = 4'b0010,
-		OP_MUL   = 4'b0011,
-		OP_DIV   = 4'b0100,
-        OP_JMP   = 4'b0101,
-        OP_JNZ    = 4'b0110,
-        OP_HALT  = 4'b0111,
-        OP_STORE = 4'b1000,
-        OP_LOAD  = 4'b1001,
-        OP_LOADI = 4'b1010
+	// MARK: Instructions
+	typedef enum logic [4:0] {
+		OP_ADD   = 5'b00001,
+		OP_SUB   = 5'b00010,
+		OP_MUL   = 5'b00011,
+		OP_DIV   = 5'b00100,
+        OP_JMP   = 5'b00101,
+        OP_JNZ   = 5'b00110,
+        OP_HALT  = 5'b00111,
+        OP_STORE = 5'b01000,
+        OP_LOAD  = 5'b01001,
+        OP_LOADI = 5'b01010,
+		OP_MOV   = 5'b01011,
+		OP_JAL	 = 5'b01100,
+		OP_JMPR  = 5'b01101
 	} operation_t;
 
-	typedef logic [31:0] RAM_Address;
+	`define MAX(a, b) (((a) > (b)) ? (a) : (b))
+	`define MIN(a, b) (((a) < (b)) ? (a) : (b))
 `endif
