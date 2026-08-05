@@ -34,7 +34,10 @@ module seg_four(
     // 開關控制器
     reg [3:0] current_val; // 現在這瞬間要翻譯的數字
     always @(*) begin
-        case(scan_cnt)
+        if (!rst_n) begin
+            an = 4'b1111; // 全滅
+            current_val = 4'b1111;
+        end else case(scan_cnt)
             2'b00: begin an = 4'b1110; current_val = in0; end // 亮最右邊，吃 in0
             2'b01: begin an = 4'b1101; current_val = in1; end // 亮右二，吃 in1
             2'b10: begin an = 4'b1011; current_val = in2; end // 亮左二，吃 in2

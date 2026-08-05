@@ -14,7 +14,7 @@ class Opcode(IntEnum):
     MUL = 3
     DIV = 4
     JMP = 5
-    JNZ = 6          # Jump if the register is zero, e.g. JZ R3 ADD_SECTION
+    JNZ = 6         # Jump if the register is zero, e.g. JZ R3 ADD_SECTION
     HALT = 7
     STORE = 8       # Save to RAM
     LOAD = 9

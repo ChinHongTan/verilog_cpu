@@ -34,4 +34,6 @@
         OP_LOAD  = 4'b1001,
         OP_LOADI = 4'b1010
 	} operation_t;
+
+	typedef logic [31:0] RAM_Address;
 `endif
