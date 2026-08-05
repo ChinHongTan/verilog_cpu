@@ -2,8 +2,11 @@
 # Output bin data
 
 # Format: [empty - 4 bit][opcode - 4 bit][regAddr1 - 4 bit][regAddr2 - 4 bit]
+# Instruction format:
+# [OPCODE][ARG1][ARG2]
 
 from enum import IntEnum
+import re
 
 class Opcode(IntEnum):
     ADD = 1
@@ -29,13 +32,13 @@ class Register(IntEnum):
 
 compiled_instruction = []
 
-def encode(code, arg2, arg3):
-    print(code, arg2, arg3)
+def encode(code, arg1, arg2):
+    print(code, arg1, arg2)
     empty_bin = f"{0:04b}" # 4 empty bit
     opcode_bin = f"{Opcode[code]:04b}" # 4 bit
 
-    reg_bin_1 = parse_operand(arg2) # 3 bit
-    reg_bin_2 = parse_operand(arg3) # 3 bit
+    reg_bin_1 = parse_operand(arg1) # 3 bit
+    reg_bin_2 = parse_operand(arg2) # 3 bit
 
     compiled_instruction.append(f"{empty_bin}{opcode_bin}{reg_bin_1}{reg_bin_2}")
 
@@ -47,58 +50,61 @@ def parse_operand(arg: str) -> str:
 
     try:
         num = int(arg)
-        if not (0 <= num <= 7):
-            raise ValueError(f"Immediate value {num} out of range.")
-        return f"0{num:03b}"
     except ValueError as e:
         raise ValueError(f"Invalid operand {arg}: must be a valid Register or number.") from e
+
+    if not (0 <= num <= 7):
+        raise ValueError(f"Immediate value {num} out of range.")
+    return f"0{num:03b}"
 
 with open("program.txt", "r", encoding="utf-8") as f:
     label_name = {}
     line_num = 0
+    temp_instructions = []
     for lines in f:
+        clean_line = lines.strip().split(";", 1)[0] # Remove comments
+        clean_line = clean_line.strip() # strip again to remove white spaces between comment and code
 
-        clean_line = lines.strip()
-        if not clean_line:
+        if not clean_line: # empty line
             continue
 
         if clean_line.endswith(":"):
             label_name[clean_line[:-1]] = line_num
             continue
 
+        parts = re.split(r"[\s,]+", clean_line.strip()) # Accept both ADD R0 R1 and ADD R0, R1
+        temp_instructions.append(parts)
         line_num += 1
 
-    f.seek(0)
+    print("Total instuctions: ", len(temp_instructions))
+    print(temp_instructions)
 
-    for lines in f:
+    for temp_instruction in temp_instructions:
+
+        opcode = temp_instruction[0]
+        arg1 = 0
         arg2 = 0
-        arg3 = 0
-        clean_line = lines.strip()
-        print(clean_line)
-        if not clean_line:
-            continue
 
-        if clean_line.endswith(":"):
-            continue
+        if opcode == 'HALT':
+            pass
+        elif opcode == 'JMP':
+            # expect label in arg1
+            arg1 = label_name.get(temp_instruction[1], None)
+            if arg1 == None:
+                raise ValueError(f"Label {temp_instruction[1]} not found.")
+        elif opcode == 'JNZ':
+            # expect label in arg2
+            arg1 = temp_instruction[1]
+            arg2 = label_name.get(temp_instruction[2], None)
+            if arg2 == None:
+                raise ValueError(f"Label {temp_instruction[2]} not found.")
+        elif opcode in ('ADD', 'SUB', 'MUL', 'DIV', 'LOADI', 'LOAD', 'STORE'):
+            arg1 = temp_instruction[1]
+            arg2 = temp_instruction[2]
+        else:
+            raise SyntaxError("Unknown opcode", opcode)
 
-        args = clean_line.split() # ['ADD', 'R1', 'R2']
-
-        if args[0] == 'JZ':
-            print("Label name:", label_name)
-            arg2 = args[1]
-            arg3 = label_name.get(args[2], None)
-            if not arg3:
-                raise ValueError(f"Label {args[2]} not found.")
-        elif args[0] == 'JMP':
-            arg2 = label_name.get(args[1], None)
-            if not arg2:
-                raise ValueError(f"Label {args[1]} not found.")
-        elif args[0] != 'HALT':
-            arg2 = args[1]
-            arg3 = args[2]
-
-        print("Encoding:", args[0], arg2, arg3)
-        encode(args[0], arg2, arg3)
+        encode(opcode, arg1, arg2)
 
 print(compiled_instruction)
 
