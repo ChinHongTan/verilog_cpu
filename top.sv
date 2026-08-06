@@ -25,6 +25,7 @@ module top(
     // IR
     RAM_Address pc; 
     RAM_Data command;
+    assign led[7:0] = pc;
 
     // RAM
     RAM_Address RAM_addr; 
@@ -108,14 +109,16 @@ module top(
     logic ALU_op;
     logic [1:0] wait_jump; // delay for RAM updating
 
-    wire [`REG_WIDTH - 1:0] imm = command[23:8];
-    wire [`REG_ADDR - 1:0] adrA = command[26:24];
-    wire [`REG_ADDR - 1:0] adrB = command[23:21];
-    wire [`REG_ADDR - 1:0] adrC = command[20:18];
+    logic [26:8] current_ir;
+    wire [`REG_ADDR - 1:0] adrA = current_ir[26:24];
+    wire [`REG_ADDR - 1:0] adrB = current_ir[23:21];
+    wire [`REG_ADDR - 1:0] adrC = current_ir[20:18];
 
+    wire [`REG_WIDTH - 1:0] imm = current_ir[23:8];
     wire [`ADDR_WIDTH - 1:0] imm_max = overflow_16to8b(imm);
 
     wire [`REG_WIDTH - 1:0] branch_imm = command[20:5];
+    assign led[15:11] = opcode;
 
     always_ff @(posedge clk_1Hz, negedge rst_n) begin : Main_FSM // MARK: MAIN
         write_enable <= READ;
@@ -130,11 +133,13 @@ module top(
             pc <= 0;
             ALU_op <= 0;
             state <= IDLE;
+            current_ir <= 0;
         end else if (!pause) case (state)
             IDLE: begin
                 state <= FETCH;
             end
             FETCH: begin : save_ir
+                current_ir <= command[26:8];
                 opcode   <= operation_t'(command[31:27]);
                 pc <= pc + 1;
                 state    <= EXECUTE;
@@ -180,7 +185,7 @@ module top(
                     end
                     OP_JNZ: begin
                              if (wait_jump == 2'b0) address1 <= adrA;
-                        else if (wait_jump == 2'b1) if (ALU_Data1 != 0) pc <= imm_max;
+                        else if (wait_jump == 2'b1) begin if (regData1 != 0) pc <= imm_max; end
                         else if (wait_jump == 2'd2) state <= FETCH;
                     end
 
