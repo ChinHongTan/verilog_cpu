@@ -6,6 +6,7 @@
 # [OPCODE][ARG1][ARG2]
 
 from enum import IntEnum
+from typing import Literal
 import re
 
 class Opcode(IntEnum):
@@ -14,7 +15,7 @@ class Opcode(IntEnum):
     MUL   = 3
     DIV   = 4
     JMP   = 5
-    JNZ   = 6         # Jump if the register is zero, e.g. JZ R3 ADD_SECTION
+    JNZ   = 6       # Jump if the register is zero, e.g. JZ R3 ADD_SECTION
     HALT  = 7
     STORE = 8       # Save to RAM
     LOAD  = 9
@@ -33,21 +34,22 @@ class Register(IntEnum):
     R6 = 6
     R7 = 7
 
+type DataType = Literal["REG", "IMM", "BRAM", "LABEL"]
 
-INSTRUCTION_FORMATS = {
-    "ADD":      [3, 3, 3],       # [3 bit reg, 3 bit reg, 3 bit reg]
-    "SUB":      [3, 3, 3],       # [3 bit reg, 3 bit reg, 3 bit reg]
-    "MUL":      [3, 3, 3],       # [3 bit reg, 3 bit reg, 3 bit reg]
-    "DIV":      [3, 3, 3],       # [3 bit reg, 3 bit reg, 3 bit reg]
-    "JMP":      [16],            # [16 bit label]
-    "JNZ":      [3, 16],         # [3 bit reg, 16 bit label]
-    "HALT":     [],              # 0 args
-    "STORE":    [3, 16],         # [3 bit reg, 16 bit BRAM]
-    "LOAD":     [3, 16],         # [3 bit reg, 16 bit BRAM]
-    "LOADI":    [3, 16],         # [3 bit reg, 16 bit literal]
-    "MOV":      [3, 3],          # [3 bit reg, 3 bit reg]
-    "JAL":      [3, 16],         # [3 bit reg, 16 bit literal]
-    "JMPR":     [3]              # [3 bit reg]
+INSTRUCTION_FORMATS: dict[str, list[tuple[DataType, int]]] = {
+    "ADD":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
+    "SUB":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
+    "MUL":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
+    "DIV":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
+    "JMP":      [("LABEL", 16)],                            # [16 bit label]
+    "JNZ":      [("REG", 3), ("LABEL", 16)],                # [3 bit reg, 16 bit label]
+    "HALT":     [],                                         # 0 args
+    "STORE":    [("REG", 3), ("BRAM", 16)],                 # [3 bit reg, 16 bit BRAM]
+    "LOAD":     [("REG", 3), ("BRAM", 16)],                 # [3 bit reg, 16 bit BRAM]
+    "LOADI":    [("REG", 3), ("IMM", 16)],                  # [3 bit reg, 16 bit literal]
+    "MOV":      [("REG", 3), ("REG", 3)],                   # [3 bit reg, 3 bit reg]
+    "JAL":      [("REG", 3), ("IMM", 16)],                  # [3 bit reg, 16 bit literal]
+    "JMPR":     [("REG", 3)]                                # [3 bit reg]
 }
 
 compiled_instruction: list[str] = []
@@ -68,24 +70,30 @@ def encode(code: str, arg1: int | str | None = None, arg2: int | str | None = No
         val = args[i]  # ADD R0 R1 R2 | LOADI R0 1000 | STORE R0 12
         width = widths[i]
 
-        bit_stream += parse_operand(val, width)
-        print(f"Value {val} gets {width} bits")
+        bit_stream += parse_operand(val, width) #TODO
 
     bit_stream = bit_stream.ljust(32, "0") # fill 0 in the end
     compiled_instruction.append(bit_stream)
 
-
-def parse_operand(arg: int | str, width: int) -> str:
+def parse_operand(arg: int | str, data: tuple[DataType, int]) -> str:
     """"Turn string code into binary in string form | e.g. ADD = 1 = 00001"""
-    # Try as Register
-    if isinstance(arg, str) and arg in Register.__members__:
-        reg_val = Register[arg].value
-        return f"{reg_val:0{width}b}"
+    field_type = data[0]
+    width = data[1]
 
-    try:
-        num = int(arg)
-    except ValueError as e:
-        raise ValueError(f"Invalid operand {arg}: must be a valid Register or number.") from e
+    if field_type == "REG":
+        if isinstance(arg, str) and arg in Register.__members__:
+            num = Register[arg].value
+        else:
+            raise ValueError(f"Expected a Register (e.g., R0), got {arg}")
+
+    elif field_type == "IMM" or "BRAM" or "LABEL":
+        if isinstance(arg, str) and arg in Register.__members__:
+            raise ValueError(f"Expected a number, got Register {arg}")
+        try:
+            num = int(arg)
+        except ValueError as e:
+            raise ValueError(f"Invalid immediate value '{arg}'") from e
+
 
     if not (0 <= num <= (2**width) - 1): # (1 << width) - 1 
         raise ValueError(f"Immediate value {num} out of range.")
@@ -119,6 +127,9 @@ with open("program.txt", "r", encoding="utf-8") as f:
         arg1 = None
         arg2 = None
         arg3 = None
+
+        if len(temp_instruction) - 1 != len(INSTRUCTION_FORMATS[opcode]):
+                raise IndexError(f"Argument provided does not match. Needed {len(INSTRUCTION_FORMATS[opcode])}, got {len(temp_instruction) - 1} instead.")
 
         if opcode == 'HALT':
             pass

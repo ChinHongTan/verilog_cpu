@@ -23,7 +23,7 @@ module top(
     RW write_enable;
 
     // IR
-    logic [15:0] pc; 
+    RAM_Address pc; 
     RAM_Data command;
 
     // RAM
@@ -50,8 +50,6 @@ module top(
         .address_write(address_write[2:0]),
         .data_in
     );
-
-    
 
     BRAM Instruction(
         .clk(clk_1Hz),
@@ -114,6 +112,8 @@ module top(
     wire [`REG_ADDR - 1:0] adrB = command[23:21];
     wire [`REG_ADDR - 1:0] adrC = command[20:18];
 
+    wire [`ADDR_WIDTH - 1:0] imm_max = overflow_16to8b(imm);
+
     always_ff @(posedge clk_1Hz, negedge rst_n) begin : Main_FSM // MARK: MAIN
         write_enable <= READ;
         RAM_write_enable <= READ;
@@ -161,7 +161,7 @@ module top(
                         state <= FETCH;
                     end
                     OP_JMP: begin
-                        pc <= imm;
+                        pc <= imm_max;
 
                         if (wait_jump == 2'b1) state <= FETCH;
                         wait_jump <= wait_jump + 1;
@@ -170,20 +170,20 @@ module top(
                         if (wait_jump == 2'b0) begin 
                             address1 <= adrA;
                         end else if (wait_jump == 2'b1) begin 
-                            pc <= regData1;
+                            pc <= overflow_16to8b(regData1);
                         end else if (wait_jump == 2'd2) begin 
                             state <= FETCH;
                         end
                     end
                     OP_JNZ: begin
                              if (wait_jump == 2'b0) address1 <= adrA;
-                        else if (wait_jump == 2'b1) if (ALU_Data1 != 0) pc <= imm;
+                        else if (wait_jump == 2'b1) if (ALU_Data1 != 0) pc <= imm_max;
                         else if (wait_jump == 2'd2) state <= FETCH;
                         wait_jump <= wait_jump + 1;
                     end
 
                     OP_JAL: begin
-                        pc <= imm;
+                        pc <= overflow_16to8b(imm);
                         address_write <= adrA;
                         data_in       <= imm;
                         write_enable  <= WRITE;
@@ -210,7 +210,7 @@ module top(
                     OP_STORE: begin
                         if (wait_jump == 2'b0) begin 
                             address1 <= adrA;
-                            RAM_addr <= imm;
+                            RAM_addr <= imm_max;
                         end else if (wait_jump == 2'b1) begin 
                             RAM_in   <= {16'b0, regData1};
                             RAM_write_enable <= WRITE;
@@ -222,9 +222,9 @@ module top(
                     OP_LOAD: begin
                         if (wait_jump == 2'b0) begin 
                             address_write <= adrA;
-                            RAM_addr <= imm;
+                            RAM_addr <= imm_max;
                         end else if (wait_jump == 2'd2) begin 
-                            data_in <= `MIN(16'd65535 ,RAM_out);
+                            data_in <= RAM_out[15:0];
                             write_enable <= WRITE;
                             state <= FETCH;
                         end
@@ -264,3 +264,8 @@ module top(
         endcase
     end
 endmodule
+
+/** return 255 if overflow */
+function automatic [7:0] overflow_16to8b(input [15:0] a);
+    return (|a[15:8]) ? 8'hFF : a[7:0]; 
+endfunction
