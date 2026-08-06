@@ -78,7 +78,6 @@ module top(
     );
 
     logic [3:0] in3, in2, in1, in0;
-    bool update_seg;
     seg_four seg_four_inst(
         .clk,
         .rst_n,
@@ -90,19 +89,6 @@ module top(
         .an,
         .SSD(seg)
     );
-    always_ff @(posedge clk_1Hz, negedge rst_n) begin : seg_control // MARK: SEG_CONTROL
-        if (!rst_n) begin
-            in3 <= 4'b0;
-            in2 <= 4'b0;
-            in1 <= 4'b0;
-            in0 <= 4'b0;
-        end else if (update_seg == true) begin
-            in3 <= 4'(32'(result / 1000) % 10);
-            in2 <= 4'(32'(result / 100) % 10);
-            in1 <= 4'(32'(result / 10) % 10);
-            in0 <= 4'(result % 10);
-        end
-    end
 
     ALU_Pkg::ALU_state_t ALU_state;
     operation_t opcode;
@@ -126,7 +112,6 @@ module top(
 
         address_write <= 0;
         data_in <= 0;
-        update_seg <= false;
         if (!rst_n) begin
             address1 <= 0;
             address2 <= 0;
@@ -134,6 +119,11 @@ module top(
             ALU_op <= 0;
             state <= IDLE;
             current_ir <= 0;
+
+            in3 <= 4'b0;
+            in2 <= 4'b0;
+            in1 <= 4'b0;
+            in0 <= 4'b0;
         end else if (!pause) case (state)
             IDLE: begin
                 state <= FETCH;
@@ -213,9 +203,17 @@ module top(
                         end  
                     end
                     OP_STORE: begin
-                        if (imm > 16'd65_500) begin
-                            update_seg <= true;
-                            state <= FETCH;
+                        if (imm >= 16'd65_500) begin
+                            if (wait_jump == 2'b0) begin 
+                                address1 <= adrA;
+                            end else if (wait_jump == 2'b1) begin : seg_control
+                                in3 <= 4'(32'(regData1 / 1000) % 10);
+                                in2 <= 4'(32'(regData1 / 100) % 10);
+                                in1 <= 4'(32'(regData1 / 10) % 10);
+                                in0 <= 4'(regData1 % 10);
+
+                                state <= FETCH;
+                            end
                         end else if (wait_jump == 2'b0) begin 
                             address1 <= adrA;
                             RAM_addr <= imm_max;
