@@ -46,4 +46,9 @@
 
 	`define MAX(a, b) (((a) > (b)) ? (a) : (b))
 	`define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
+    /** return 255 if overflow */
+    function automatic [7:0] overflow_16to8b(input [15:0] a);
+        return (|a[15:8]) ? 8'hFF : a[7:0]; 
+    endfunction
 `endif
