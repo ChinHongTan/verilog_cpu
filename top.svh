@@ -29,20 +29,30 @@
 
 	// MARK: Instructions
 	typedef enum logic [4:0] {
-		OP_ADD   = 5'b00001,
-		OP_SUB   = 5'b00010,
-		OP_MUL   = 5'b00011,
-		OP_DIV   = 5'b00100,
-        OP_JMP   = 5'b00101,
-        OP_JNZ   = 5'b00110,
-        OP_HALT  = 5'b00111,
-        OP_STORE = 5'b01000,
-        OP_LOAD  = 5'b01001,
-        OP_LOADI = 5'b01010,
-		OP_MOV   = 5'b01011,
-		OP_JAL	 = 5'b01100,
-		OP_JMPR  = 5'b01101
+		OP_ADD   = 5'd1,
+        OP_SUB   = 5'd2,
+        OP_MUL   = 5'd3,
+        OP_DIV   = 5'd4,
+        OP_MOV   = 5'd5,
+        OP_LOAD  = 5'd6,
+        OP_LOADI = 5'd7,       // Save to register with an immediate number, e.g. LOADI R0 2
+        OP_LOADR = 5'd8,
+        OP_STORE = 5'd9,       // Save to RAM
+        OP_JMP   = 5'd10,
+        OP_JNZ   = 5'd11,      // Jump if the register is zero, e.g. JZ R3 ADD_SECTION
+        OP_JAL	 = 5'd12,
+        OP_JMPR  = 5'd13,
+		OP_BEQ   = 5'd14,
+		OP_BNE   = 5'd15,
+		OP_BLT   = 5'd16,
+		OP_BGE   = 5'd17,
+        OP_HALT  = 5'd18
 	} operation_t;
+
+	typedef enum logic [0:0] {
+		false = 1'b0,
+		true  = 1'b1
+	} bool;
 
 	`define MAX(a, b) (((a) > (b)) ? (a) : (b))
 	`define MIN(a, b) (((a) < (b)) ? (a) : (b))

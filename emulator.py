@@ -1,36 +1,140 @@
-opcode_map = {
-    1: "ADD",
-    2: "SUB",
-    3: "MUL",
-    4: "DIV",
-    5: "JMP",
-    6: "JNZ",
-    7: "HALT",
-    8: "STORE",
-    9: "LOAD",
-    10: "LOADI"
+from typing import Literal
+
+opcode_map: dict[int, str] = {
+    1:  "ADD",
+    2:  "SUB",
+    3:  "MUL",
+    4:  "DIV",
+    5:  "MOV",
+    6:  "LOAD",
+    7:  "LOADI", 
+    8:  "LOADR", 
+    9:  "STORE", 
+    10: "JMP",
+    11: "JNZ",
+    12: "JAL",	  
+    13: "JMPR",  
+    14: "BEQ",
+    15: "BNE",
+    16: "BLT",
+    17: "BGE",
+    18: "HALT"
 }
 
+type DataType = Literal["REG", "IMM", "BRAM", "LABEL"]
+
+INSTRUCTION_FORMATS: dict[str, list[tuple[DataType, int]]] = {
+    "ADD":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
+    "SUB":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
+    "MUL":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
+    "DIV":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
+    "MOV":      [("REG", 3), ("REG", 3)],                   # [3 bit reg, 3 bit reg]
+    "LOAD":     [("REG", 3), ("BRAM", 16)],                 # [3 bit reg, 16 bit BRAM]
+    "LOADI":    [("REG", 3), ("IMM", 16)],                  # [3 bit reg, 16 bit literal]
+    "LOADR":    [("REG", 3), ("REG", 3)],                   # [3 bit reg, 3 bit reg]
+    "STORE":    [("REG", 3), ("BRAM", 16)],                 # [3 bit reg, 16 bit BRAM]
+    "JMP":      [("REG", 3), ("LABEL", 16)],                # [16 bit label]
+    "JNZ":      [("REG", 3), ("LABEL", 16)],                # [3 bit reg, 16 bit label]
+    "JAL":      [("REG", 3), ("IMM", 16)],                  # [3 bit reg, 16 bit literal]
+    "JMPR":     [("REG", 3)],                               # [3 bit reg]
+    "BEQ":      [("REG", 3), ("REG", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
+    "BNE":      [("REG", 3), ("REG", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
+    "BLT":      [("REG", 3), ("REG", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
+    "BGE":      [("REG", 3), ("REG", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
+    "HALT":     [],                                         # 0 args
+}
+
+reg = [0] * 8
 words: list[str] = []
-
-def parse_binary_operand(operand_bits: str) -> str:
-    is_register = operand_bits[0] == '1'
-    val = int(operand_bits[1:], 2)  # Convert 3-bit binary to int
-
-    if is_register:
-        return "R" + str(val)
-    else:
-        return str(val)
+Bram = [0] * 256  # 256 words of 32 bits each
 
 with open("ex1.mem", "r", encoding="utf-8") as f:
     for line in f:
         words.append(line)
 
-for w in words:
-    opcode_val = int(w[4:8], 2)
+pc = 0
+while True:
+    w = words[pc]
+    opcode_val = int(w[0:5], 2)
     opcode = opcode_map[opcode_val]
-    arg1_bits = w[8:12]
-    arg2_bits = w[12:16]
-    arg1 = parse_binary_operand(arg1_bits)
-    arg2 = parse_binary_operand(arg2_bits)
-    print(opcode, arg1, arg2)
+    format = INSTRUCTION_FORMATS[opcode]
+    # [("REG", 3), ("REG", 3), ("REG", 3)]
+    last_index = 5
+    args: list[int] = [0] * 3
+    for (i, data) in enumerate(format):
+        field_type = data[0]
+        width = data[1]
+        
+        args[i] = int(w[last_index:last_index + width], base=2)
+        last_index += width
+
+    pc += 1
+
+    match opcode:
+        case "ADD":
+            reg[args[0]] = reg[args[1]] + reg[args[2]]
+            
+        case "SUB":
+            reg[args[0]] = reg[args[1]] - reg[args[2]]
+            
+        case "MUL":
+            reg[args[0]] = reg[args[1]] * reg[args[2]]
+            
+        case "DIV":
+            reg[args[0]] = reg[args[1]] // reg[args[2]]
+            
+        case "MOV":
+            reg[args[0]] = reg[args[1]]
+            
+        case "LOAD": # BRAM
+            reg[args[0]] = Bram[args[1]]
+            
+        case "LOADI":
+            reg[args[0]] = args[1]
+            
+        case "LOADR": # BRAM
+            reg[args[0]] = Bram[args[1]]
+            
+        case "STORE": # BRAM
+            if args[1] >= 65500:
+                print(f"========= output: {reg[args[0]]} =========")
+            else:
+                Bram[args[1]] = reg[args[0]]
+            
+        case "JMP":
+            pc = args[1]
+            
+        case "JNZ":
+            if reg[args[0]] != 0:
+                pc = args[1]
+            
+        case "JAL":
+            reg[args[0]] = pc + 1
+            pc = args[1]
+            
+        case "JMPR":
+            pc = reg[args[0]]
+            
+        case "BEQ":
+            if reg[args[0]] == reg[args[1]]:
+                pc = args[2]
+            
+        case "BNE":
+            if reg[args[0]] != reg[args[1]]:
+                pc = args[2]           
+            
+        case "BLT":
+            if reg[args[0]] <  reg[args[1]]:
+                pc = args[2]
+            
+        case "BGE":
+            if reg[args[0]] >= reg[args[1]]:
+                pc = args[2]
+            
+        case "HALT":
+            break
+
+    #print(f"line {pc}:")
+    #print(opcode)
+    #print(format)
+    #print(reg, args)

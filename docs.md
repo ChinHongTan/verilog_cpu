@@ -15,8 +15,15 @@
 - [STORE / LOAD] R0 100: 把 R0 裡的值存到 BRAM[100] 去
 - LOADI R0 10: 把 10 存在 R0裡面
 - MOV R0 R1: 把 R1 的值存到 R0 裡面去
-- JAL LABEL R7: 跳到 LABEL 去，並且把下一行的地址直接存在 R7 裡面
+- JAL R7 LABEL: 跳到 LABEL 去，並且把下一行要回來的地址直接存在 R7 裡面
 - JMPR R7: 跳到 R7
+
+- LOADR R0 R1 ; R0 = BRAM[R1]
+
+- BEQ - branch if equal ; BEQ R0 R1 LABEL
+- BNE - branch if not equal
+- BLT - branch if less than
+- BGE = branch if greater than or equal to
 
 目前的修改方向和我想到的問題：
 - JMP 沒辦法跳回 R7 去，因為目前 JMP 分不出來數字 / Register 地址
@@ -42,14 +49,24 @@ JNZ: [op - 5][adr - 3][imm - 16]
 JAL: [op - 5][adr 3][imm - 16]
 
 STORE / LOAD: [op - 5][adr - 3][BRAM adr - 16]
+65500: 7 segment display
+
 
 JMPR: [op - 5][adr - 3]
 
-### RAM
+### 
 MOV: [op - 5][adr - 3][adr - 3]
+LOADR: [op - 5][addr - 3][addr - 3]
 
+### branch if 
+BEQ - [op - 5][adr - 3][adr - 3][BRAM adr - 16]
+BNE - [op - 5][adr - 3][adr - 3][BRAM adr - 16]
+BLT - [op - 5][adr - 3][adr - 3][BRAM adr - 16]
+BGE = [op - 5][adr - 3][adr - 3][BRAM adr - 16]
 
 HALT: [op - 5]
+
+
 
 
 1. JAL R7 my_function   ; Jump to "my_function", save return address in R7
@@ -70,3 +87,47 @@ double(2)
 
 def double(num):
     return num + num
+
+
+目前我們是把ALU的輸出直接接到顯示屏上
+我們接下來要繼續弄的話，很大部分應該是要去增加I/O支援
+與其去給每一個I/O寫指令，我們可以用一個叫memory mapped I/O的東西
+就比如說，assembly我寫
+STORE R0 65500
+65500是隨便選的一個數字，放在後面不會跟BRAM搶地址
+這個的意思就是
+CPU看到了65500,他不是把R0裡面的數字接到BRAM[65500]上，而是接到顯示屏上
+這樣我在軟體就可以寫STORE R0 65500
+或者STORE R3 65500
+相當於python裡面的print(R0)和print(R3)
+這樣子我們就可以很方便的接上更多的I/O模組
+比如按鈕接到65501
+開關接到65502之類的
+
+第二個概念是LOADR
+LOADR R0 R1的意思就是把BRAM[R1]裡面的東西，存在R0裡面
+比如我在BRAM裡面存著[1, 2, 3, 4, 5]
+我要用一個loop把他們全部加起來
+目前的做不到，我要寫
+LOAD R0 1
+LOAD R0 2
+LOAD R0 3
+
+用LOADR的話我們就可以寫
+
+LOOP:
+LOADR R0 R1
+ADD R3 R3 R0
+ADDI R1 R1 1 (ADDI 就是 R1 + 數字)
+JNZ R2 LOOP
+
+這樣我們就可以loop完整個BRAM
+比如
+LOADR R0 R1 ; R1 = 1, R0 = BRAM[R1] = BRAM[1] = 2
+ADD R3 R3 R0 ; R3 = 0, R0 =2, R3 = 0 + 2 = 2
+ADDI R1 R1 1 ; R1 = R1 + 1 = 1 + 1 = 2
+JNZ R2 LOOP就跳回去
+R1 = 2
+讀BRAM[2]的資料
+相加
+重複

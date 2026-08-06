@@ -11,5 +11,6 @@ MOV R0 R1       ; 2
 MOV R1 R2       ; 2
 
 SUB R3 R3 R4    ; 3
+STORE R2 65500
 JNZ R3 LABEL    ; 3
 HALT            ; 2

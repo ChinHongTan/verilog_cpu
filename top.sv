@@ -77,6 +77,7 @@ module top(
     );
 
     logic [3:0] in3, in2, in1, in0;
+    bool update_seg;
     seg_four seg_four_inst(
         .clk,
         .rst_n,
@@ -94,7 +95,7 @@ module top(
             in2 <= 4'b0;
             in1 <= 4'b0;
             in0 <= 4'b0;
-        end else if (opcode == OP_ADD && ALU_state == ALU_Pkg::ALU_DONE) begin
+        end else if (update_seg == true) begin
             in3 <= 4'(32'(result / 1000) % 10);
             in2 <= 4'(32'(result / 100) % 10);
             in1 <= 4'(32'(result / 10) % 10);
@@ -114,12 +115,15 @@ module top(
 
     wire [`ADDR_WIDTH - 1:0] imm_max = overflow_16to8b(imm);
 
+    wire [`REG_WIDTH - 1:0] branch_imm = command[20:5];
+
     always_ff @(posedge clk_1Hz, negedge rst_n) begin : Main_FSM // MARK: MAIN
         write_enable <= READ;
         RAM_write_enable <= READ;
+
         address_write <= 0;
         data_in <= 0;
-        wait_jump <= 0;
+        update_seg <= false;
         if (!rst_n) begin
             address1 <= 0;
             address2 <= 0;
@@ -134,6 +138,7 @@ module top(
                 opcode   <= operation_t'(command[31:27]);
                 pc <= pc + 1;
                 state    <= EXECUTE;
+                wait_jump <= 0;
             end
             EXECUTE: begin //TODO ALU & EXECUTE 協調部分
                 case (opcode)
@@ -151,7 +156,6 @@ module top(
                             ALU_op <= 0;
                             state <= FETCH;
                         end
-                        wait_jump <= wait_jump + 1;
                     end
                     OP_LOADI: begin
                         address_write <= adrA;
@@ -164,7 +168,6 @@ module top(
                         pc <= imm_max;
 
                         if (wait_jump == 2'b1) state <= FETCH;
-                        wait_jump <= wait_jump + 1;
                     end
                     OP_JMPR: begin
                         if (wait_jump == 2'b0) begin 
@@ -179,7 +182,6 @@ module top(
                              if (wait_jump == 2'b0) address1 <= adrA;
                         else if (wait_jump == 2'b1) if (ALU_Data1 != 0) pc <= imm_max;
                         else if (wait_jump == 2'd2) state <= FETCH;
-                        wait_jump <= wait_jump + 1;
                     end
 
                     OP_JAL: begin
@@ -189,7 +191,6 @@ module top(
                         write_enable  <= WRITE;
                         
                         if (wait_jump == 2'b1) state <= FETCH;
-                        wait_jump <= wait_jump + 1;
                     end 
 
                     OP_HALT: begin
@@ -205,10 +206,12 @@ module top(
 
                             state <= FETCH;
                         end  
-                        wait_jump <= wait_jump + 1;
                     end
                     OP_STORE: begin
-                        if (wait_jump == 2'b0) begin 
+                        if (imm > 16'd65_500) begin
+                            update_seg <= true;
+                            state <= FETCH;
+                        end else if (wait_jump == 2'b0) begin 
                             address1 <= adrA;
                             RAM_addr <= imm_max;
                         end else if (wait_jump == 2'b1) begin 
@@ -217,7 +220,6 @@ module top(
                         end else if (wait_jump == 2'd2)  begin 
                             state <= FETCH;
                         end
-                        wait_jump <= wait_jump + 1;
                     end
                     OP_LOAD: begin
                         if (wait_jump == 2'b0) begin 
@@ -228,13 +230,43 @@ module top(
                             write_enable <= WRITE;
                             state <= FETCH;
                         end
-                        wait_jump <= wait_jump + 1;
+                    end
+
+                    OP_LOADR: begin // LOADR R0 R1 ; R0 = BRAM[R1]
+                        if (wait_jump == 2'b0) begin 
+                            address_write <= adrA;
+                            address1 <= adrB;
+                        end else if (wait_jump == 2'd1) begin 
+                            RAM_addr <= overflow_16to8b(regData1);
+                        end else if (wait_jump == 2'd3) begin 
+                            data_in <= RAM_out[15:0];
+                            write_enable <= WRITE;
+                            state <= FETCH;
+                        end
+                    end
+
+                    OP_BEQ, OP_BNE, OP_BLT, OP_BGE: begin
+                        if (wait_jump == 2'b0) begin 
+                            address1 <= adrA;
+                            address2 <= adrB;
+                        end else if (wait_jump == 2'd1) begin 
+                            if ((opcode == OP_BEQ && regData1 == regData2) ||
+                                (opcode == OP_BNE && regData1 != regData2) ||
+                                (opcode == OP_BLT && regData1 <  regData2) ||
+                                (opcode == OP_BGE && regData1 >= regData2)
+                            ) begin 
+                                pc <= overflow_16to8b(branch_imm);
+                            end
+                        end else if (wait_jump == 2'd3) begin 
+                            state <= FETCH;
+                        end
                     end
 
                     default: begin
                         state <= FETCH;
                     end
                 endcase
+                wait_jump <= wait_jump + 1;
             end
             HALT: begin
                 state <= HALT; // stay in HALT state
