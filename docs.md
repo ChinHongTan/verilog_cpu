@@ -19,11 +19,15 @@
 - JMPR R7: 跳到 R7
 
 - LOADR R0 R1 ; R0 = BRAM[R1]
+- STORER R0 R1 ; BRAM[R1] = R0
 
 - BEQ - branch if equal ; BEQ R0 R1 LABEL
 - BNE - branch if not equal
 - BLT - branch if less than
 - BGE = branch if greater than or equal to
+
+- ADDI R0 R1 1 ; R0 = R1 + 1
+- SUBI R0 R1 1 ; R0 = R1 - 1
 
 目前的修改方向和我想到的問題：
 - JMP 沒辦法跳回 R7 去，因為目前 JMP 分不出來數字 / Register 地址
@@ -63,6 +67,8 @@ BEQ -                   [op - 5][adr - 3][adr - 3][BRAM adr - 16]
 BNE -                   [op - 5][adr - 3][adr - 3][BRAM adr - 16]
 BLT -                   [op - 5][adr - 3][adr - 3][BRAM adr - 16]
 BGE -                   [op - 5][adr - 3][adr - 3][BRAM adr - 16]
+ADDI -                  [op - 5][adr - 3][adr - 3][BRAM adr - 16]
+SUBI -                  [op - 5][adr - 3][adr - 3][BRAM adr - 16]
 
 HALT:                   [op - 5]
 

@@ -10,24 +10,27 @@ from typing import Literal
 import re
 
 class Opcode(IntEnum):
-    ADD   = 1
-    SUB   = 2
-    MUL   = 3
-    DIV   = 4
-    MOV   = 5
-    LOAD  = 6
-    LOADI = 7       # Save to register with an immediate number, e.g. LOADI R0 2
-    LOADR = 8
-    STORE = 9       # Save to RAM
-    JMP   = 10
-    JNZ   = 11      # Jump if the register is zero, e.g. JZ R3 ADD_SECTION
-    JAL	  = 12
-    JMPR  = 13
-    BEQ   = 14
-    BNE   = 15
-    BLT   = 16
-    BGE   = 17
-    HALT  = 18
+    ADD    = 1
+    SUB    = 2
+    MUL    = 3
+    DIV    = 4
+    ADDI   = 5
+    SUBI   = 6
+    MOV    = 7
+    LOAD   = 8
+    LOADI  = 9       # Save to register with an immediate number, e.g. LOADI R0 2
+    LOADR  = 10
+    STORE  = 11       # Save to RAM
+    STORER = 12
+    JMP    = 13
+    JNZ    = 14      # Jump if the register is zero, e.g. JZ R3 ADD_SECTION
+    JAL	   = 15
+    JMPR   = 16
+    BEQ    = 17
+    BNE    = 18
+    BLT    = 19
+    BGE    = 20
+    HALT   = 21
     
 class Register(IntEnum):
     R0 = 0
@@ -46,11 +49,14 @@ INSTRUCTION_FORMATS: dict[str, list[tuple[DataType, int]]] = {
     "SUB":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
     "MUL":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
     "DIV":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
+    "ADDI":     [("REG", 3), ("REG", 3), ("IMM", 16)],      # [3 bit reg, 3 bit reg, 16 bit literal]
+    "SUBI":     [("REG", 3), ("REG", 3), ("IMM", 16)],      # [3 bit reg, 3 bit reg, 16 bit literal]
     "MOV":      [("REG", 3), ("REG", 3)],                   # [3 bit reg, 3 bit reg]
     "LOAD":     [("REG", 3), ("BRAM", 16)],                 # [3 bit reg, 16 bit BRAM]
     "LOADI":    [("REG", 3), ("IMM", 16)],                  # [3 bit reg, 16 bit literal]
     "LOADR":    [("REG", 3), ("REG", 3)],                   # [3 bit reg, 3 bit reg]
     "STORE":    [("REG", 3), ("BRAM", 16)],                 # [3 bit reg, 16 bit BRAM]
+    "STORER":   [("REG", 3), ("REG", 3)],                   # [3 bit reg, 3 bit reg]
     "JMP":      [("REG", 3), ("LABEL", 16)],                # [3 bit padding, 16 bit label]
     "JNZ":      [("REG", 3), ("LABEL", 16)],                # [3 bit reg, 16 bit label]
     "JAL":      [("REG", 3), ("LABEL", 16)],                # [3 bit reg, 16 bit literal]
@@ -163,11 +169,11 @@ with open("program.txt", "r", encoding="utf-8") as f:
             arg3 = label_name.get(temp_instruction[3], None) # label
             if arg3 == None:
                 raise ValueError(f"Label {temp_instruction[3]} not found.")
-        elif opcode in ('ADD', 'SUB', 'MUL', 'DIV'): # ALU / Branch, 3 args
+        elif opcode in ('ADD', 'SUB', 'MUL', 'DIV', 'ADDI', 'SUBI'): # ALU / Branch, 3 args
             arg1 = temp_instruction[1]
             arg2 = temp_instruction[2]
             arg3 = temp_instruction[3]
-        elif opcode in ('LOADI', 'LOAD', 'STORE', 'MOV', 'LOADR'): # 2 args
+        elif opcode in ('LOADI', 'LOAD', 'STORE', 'MOV', 'LOADR', 'STORER'): # 2 args
             arg1 = temp_instruction[1]
             arg2 = temp_instruction[2]
         elif opcode == 'JMPR':

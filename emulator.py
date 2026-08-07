@@ -5,20 +5,23 @@ opcode_map: dict[int, str] = {
     2:  "SUB",
     3:  "MUL",
     4:  "DIV",
-    5:  "MOV",
-    6:  "LOAD",
-    7:  "LOADI", 
-    8:  "LOADR", 
-    9:  "STORE", 
-    10: "JMP",
-    11: "JNZ",
-    12: "JAL",	  
-    13: "JMPR",  
-    14: "BEQ",
-    15: "BNE",
-    16: "BLT",
-    17: "BGE",
-    18: "HALT"
+    5:  "ADDI",
+    6:  "SUBI",
+    7:  "MOV",
+    8:  "LOAD",
+    9:  "LOADI", 
+    10: "LOADR", 
+    11: "STORE", 
+    12: "STORER",
+    13: "JMP",
+    14: "JNZ",
+    15: "JAL",	  
+    16: "JMPR",  
+    17: "BEQ",
+    18: "BNE",
+    19: "BLT",
+    20: "BGE",
+    21: "HALT"
 }
 
 type DataType = Literal["REG", "IMM", "BRAM", "LABEL"]
@@ -28,12 +31,15 @@ INSTRUCTION_FORMATS: dict[str, list[tuple[DataType, int]]] = {
     "SUB":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
     "MUL":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
     "DIV":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
+    "ADDI":     [("REG", 3), ("REG", 3), ("IMM", 16)],      # [3 bit reg, 3 bit reg, 16 bit literal]
+    "SUBI":     [("REG", 3), ("REG", 3), ("IMM", 16)],      # [3 bit reg, 3 bit reg, 16 bit literal]
     "MOV":      [("REG", 3), ("REG", 3)],                   # [3 bit reg, 3 bit reg]
     "LOAD":     [("REG", 3), ("BRAM", 16)],                 # [3 bit reg, 16 bit BRAM]
     "LOADI":    [("REG", 3), ("IMM", 16)],                  # [3 bit reg, 16 bit literal]
     "LOADR":    [("REG", 3), ("REG", 3)],                   # [3 bit reg, 3 bit reg]
     "STORE":    [("REG", 3), ("BRAM", 16)],                 # [3 bit reg, 16 bit BRAM]
-    "JMP":      [("REG", 3), ("LABEL", 16)],                # [16 bit label]
+    "STORER":   [("REG", 3), ("REG", 3)],                   # [3 bit reg, 3 bit reg]
+    "JMP":      [("REG", 3), ("LABEL", 16)],                # [3 bit padding, 16 bit label]
     "JNZ":      [("REG", 3), ("LABEL", 16)],                # [3 bit reg, 16 bit label]
     "JAL":      [("REG", 3), ("LABEL", 16)],                # [3 bit reg, 16 bit literal]
     "JMPR":     [("REG", 3)],                               # [3 bit reg]
@@ -82,6 +88,12 @@ while True:
             
         case "DIV":
             reg[args[0]] = reg[args[1]] // reg[args[2]]
+
+        case "ADDI":
+            reg[args[0]] = reg[args[1]] + args[2]
+
+        case "SUBI":
+            reg[args[0]] = reg[args[1]] - args[2]
             
         case "MOV":
             reg[args[0]] = reg[args[1]]
@@ -100,6 +112,9 @@ while True:
                 print(f"========= output: {reg[args[0]]} =========")
             else:
                 Bram[args[1]] = reg[args[0]]
+
+        case "STORER":
+            Bram[args[1]] = reg[args[0]]
             
         case "JMP":
             pc = args[1]

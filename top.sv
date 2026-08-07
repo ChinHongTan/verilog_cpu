@@ -155,6 +155,21 @@ module top(
                             state <= FETCH;
                         end
                     end
+                    OP_ADDI, OP_SUBI: begin
+                        address_write <= adrA;
+                        address1      <= adrB;
+                        if (wait_jump == 2'b1) begin
+                            ALU_Data1 <= regData1;
+                            ALU_Data2 <= imm;
+                            ALU_op <= 1;
+                        end else if (ALU_state == ALU_Pkg::ALU_DONE) begin
+                            write_enable <= WRITE;
+                            data_in <= result;
+                            ALU_op <= 0;
+                            state <= FETCH;
+                        end
+                    end
+
                     OP_LOADI: begin
                         address_write <= adrA;
                         data_in       <= imm;
@@ -229,6 +244,10 @@ module top(
                             state <= FETCH;
                         end
                     end
+
+                    OP_STORER: begin 
+                        //TODO
+                    end
                     OP_LOAD: begin
                         if (wait_jump == 2'b0) begin 
                             address_write <= adrA;
@@ -269,6 +288,9 @@ module top(
                             state <= FETCH;
                         end
                     end
+
+                    
+                    
 
                     default: begin
                         state <= FETCH;
