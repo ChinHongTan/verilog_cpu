@@ -16,19 +16,19 @@ module top(
     ALU_Pkg::ALU_Mode ALU_mode;
 
     // Registers
-	RegData regData1, regData2;
-    RegData ALU_Data1, ALU_Data2, result;
-    RegData data_in;
-    RegAddr address_write, address1, address2; // NEVER be number
-    RW write_enable;
+	RegData regData1, regData2;                 // data fetched from register
+    RegData ALU_Data1, ALU_Data2, result;       // data feed into ALU; output from ALU
+    RegData data_in;                            // used to send data into register
+    RegAddr address_write, address1, address2;  // NEVER be number [3 bit]
+    RW write_enable;                            // flag [1 bit], 0 disable, 1 enable
 
-    // IR
-    RAM_Address pc; 
-    RAM_Data command;
+    // IR (ROM)
+    RAM_Address pc;                             // address of next instruction
+    RAM_Data command;                           // fetched from BRAM
     assign led[7:0] = pc;
 
-    // RAM
-    RAM_Address RAM_addr; 
+    // RAM (data)
+    RAM_Address RAM_addr;
     RAM_Data RAM_in, RAM_out;
     RW RAM_write_enable;
 
@@ -52,14 +52,17 @@ module top(
         .data_in
     );
 
+    // Harvard architecture: instructions and data live in physically separate memories
+    // ROM
     BRAM Instruction(
         .clk(clk_1Hz),
-        .write(1'b0), // 0:read 1:write
-        .address(pc),
-        .in(32'b0),
-        .out(command)
+        .write(1'b0),   // 0:read 1:write
+        .address(pc),   // address
+        .in(32'b0),     // value to store
+        .out(command)   // value to read
     );
 
+    // Data
     BRAM RAM(
         .clk(clk_1Hz),
         .write(RAM_write_enable), 
@@ -90,23 +93,23 @@ module top(
         .SSD(seg)
     );
 
-    ALU_Pkg::ALU_state_t ALU_state;
+    ALU_Pkg::ALU_state_t ALU_state;                                 // 1 cycle delay
     operation_t opcode;
     logic ALU_op;
-    logic [1:0] wait_jump; // delay for RAM updating
+    logic [1:0] wait_jump;                                          // delay for RAM updating
 
-    logic [26:8] current_ir;
-    wire [`REG_ADDR - 1:0] adrA = current_ir[26:24];
-    wire [`REG_ADDR - 1:0] adrB = current_ir[23:21];
-    wire [`REG_ADDR - 1:0] adrC = current_ir[20:18];
+    logic [26:5] current_ir;                                        // instruction register
+    wire [`REG_ADDR - 1:0] adrA = current_ir[26:24];                // first reg
+    wire [`REG_ADDR - 1:0] adrB = current_ir[23:21];                // second reg
+    wire [`REG_ADDR - 1:0] adrC = current_ir[20:18];                // third reg
 
-    wire [`REG_WIDTH - 1:0] imm = current_ir[23:8];
-    wire [`ADDR_WIDTH - 1:0] imm_max = overflow_16to8b(imm);
+    wire [`REG_WIDTH - 1:0] imm = current_ir[23:8];                 // label / bram / imm - 16 bit
+    wire [`ADDR_WIDTH - 1:0] imm_max = overflow_16to8b(imm);        // saturate to 0xFF
 
-    wire [`REG_WIDTH - 1:0] branch_imm = command[20:5];
+    wire [`REG_WIDTH - 1:0] branch_imm = current_ir[20:5];          // read from BRAM output
     assign led[15:11] = opcode;
 
-    always_ff @(posedge clk_1Hz, negedge rst_n) begin : Main_FSM // MARK: MAIN
+    always_ff @(posedge clk_1Hz, negedge rst_n) begin : Main_FSM    // MARK: MAIN
         write_enable <= READ;
         RAM_write_enable <= READ;
 
@@ -129,7 +132,7 @@ module top(
                 state <= FETCH;
             end
             FETCH: begin : save_ir
-                current_ir <= command[26:8];
+                current_ir <= command[26:5];
                 opcode   <= operation_t'(command[31:27]);
                 pc <= pc + 1;
                 state    <= EXECUTE;
@@ -180,12 +183,14 @@ module top(
                     end
 
                     OP_JAL: begin
-                        pc <= overflow_16to8b(imm);
-                        address_write <= adrA;
-                        data_in       <= imm;
-                        write_enable  <= WRITE;
-                        
-                        if (wait_jump == 2'b1) state <= FETCH;
+                        if (wait_jump == 2'b0) begin
+                            address_write <= adrA;
+                            data_in       <= 16'(pc);
+                            write_enable  <= WRITE;
+                            pc            <= overflow_16to8b(imm);
+                        end else if (wait_jump == 2'b1) begin
+                            state <= FETCH;
+                        end
                     end 
 
                     OP_HALT: begin

@@ -40,53 +40,34 @@
 ## 指令格式
 
 ### ALU
-ADD / SUB / MUL / DIV: [op - 5][adr - 3][adr - 3][adr - 3]
+ADD / SUB / MUL / DIV:  [op - 5][adr - 3][adr - 3][adr - 3]
 
 ### imm
-LOADI: [op - 5][adr - 3][imm - 16]
-JMP: [op - 5][empty - 3][imm - 16]
-JNZ: [op - 5][adr - 3][imm - 16]
-JAL: [op - 5][adr 3][imm - 16]
+LOADI:                  [op - 5][adr - 3][imm - 16]
+JMP:                    [op - 5][empty - 3][imm - 16]
+JNZ:                    [op - 5][adr - 3][imm - 16]
+JAL:                    [op - 5][adr 3][imm - 16]
 
-STORE / LOAD: [op - 5][adr - 3][BRAM adr - 16]
-65500: 7 segment display
+STORE / LOAD:           [op - 5][adr - 3][BRAM adr - 16]
+    65500: 7 segment display
 
 
-JMPR: [op - 5][adr - 3]
+JMPR:                   [op - 5][adr - 3]
 
 ### 
-MOV: [op - 5][adr - 3][adr - 3]
-LOADR: [op - 5][addr - 3][addr - 3]
+MOV:                    [op - 5][adr - 3][adr - 3]
+LOADR:                  [op - 5][addr - 3][addr - 3]
 
 ### branch if 
-BEQ - [op - 5][adr - 3][adr - 3][BRAM adr - 16]
-BNE - [op - 5][adr - 3][adr - 3][BRAM adr - 16]
-BLT - [op - 5][adr - 3][adr - 3][BRAM adr - 16]
-BGE = [op - 5][adr - 3][adr - 3][BRAM adr - 16]
+BEQ -                   [op - 5][adr - 3][adr - 3][BRAM adr - 16]
+BNE -                   [op - 5][adr - 3][adr - 3][BRAM adr - 16]
+BLT -                   [op - 5][adr - 3][adr - 3][BRAM adr - 16]
+BGE -                   [op - 5][adr - 3][adr - 3][BRAM adr - 16]
 
-HALT: [op - 5]
-
-
-
-
-1. JAL R7 my_function   ; Jump to "my_function", save return address in R7
-2. ; [more code]
-
-3.  my_function:
-    ; [Function code goes here]
-    JMP R7           ; Returns to the caller using the saved address
+HALT:                   [op - 5]
 
 
 
-=======python
-a = 1
-b = 2
-
-double(1)
-double(2)
-
-def double(num):
-    return num + num
 
 
 目前我們是把ALU的輸出直接接到顯示屏上

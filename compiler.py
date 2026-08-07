@@ -53,7 +53,7 @@ INSTRUCTION_FORMATS: dict[str, list[tuple[DataType, int]]] = {
     "STORE":    [("REG", 3), ("BRAM", 16)],                 # [3 bit reg, 16 bit BRAM]
     "JMP":      [("REG", 3), ("LABEL", 16)],                # [3 bit padding, 16 bit label]
     "JNZ":      [("REG", 3), ("LABEL", 16)],                # [3 bit reg, 16 bit label]
-    "JAL":      [("REG", 3), ("IMM", 16)],                  # [3 bit reg, 16 bit literal]
+    "JAL":      [("REG", 3), ("LABEL", 16)],                # [3 bit reg, 16 bit literal]
     "JMPR":     [("REG", 3)],                               # [3 bit reg]
     "BEQ":      [("REG", 3), ("REG", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
     "BNE":      [("REG", 3), ("REG", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
@@ -149,7 +149,7 @@ with open("program.txt", "r", encoding="utf-8") as f:
             arg2 = label_name.get(temp_instruction[1], None)
             if arg2 == None:
                 raise ValueError(f"Label {temp_instruction[1]} not found.")
-        elif opcode == 'JNZ':
+        elif opcode in ('JNZ', 'JAL'):
             # expect label in arg2
             arg1 = temp_instruction[1] # reg addr - 3 bit
             arg2 = label_name.get(temp_instruction[2], None) # label - 16 bit
@@ -159,7 +159,7 @@ with open("program.txt", "r", encoding="utf-8") as f:
             arg1 = temp_instruction[1]
             arg2 = temp_instruction[2]
             arg3 = temp_instruction[3]
-        elif opcode in ('LOADI', 'LOAD', 'STORE', 'MOV', 'JAL', 'LOADR'): # 2 args
+        elif opcode in ('LOADI', 'LOAD', 'STORE', 'MOV', 'LOADR'): # 2 args
             arg1 = temp_instruction[1]
             arg2 = temp_instruction[2]
         elif opcode == 'JMPR':

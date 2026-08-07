@@ -35,7 +35,7 @@ INSTRUCTION_FORMATS: dict[str, list[tuple[DataType, int]]] = {
     "STORE":    [("REG", 3), ("BRAM", 16)],                 # [3 bit reg, 16 bit BRAM]
     "JMP":      [("REG", 3), ("LABEL", 16)],                # [16 bit label]
     "JNZ":      [("REG", 3), ("LABEL", 16)],                # [3 bit reg, 16 bit label]
-    "JAL":      [("REG", 3), ("IMM", 16)],                  # [3 bit reg, 16 bit literal]
+    "JAL":      [("REG", 3), ("LABEL", 16)],                # [3 bit reg, 16 bit literal]
     "JMPR":     [("REG", 3)],                               # [3 bit reg]
     "BEQ":      [("REG", 3), ("REG", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
     "BNE":      [("REG", 3), ("REG", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
@@ -58,7 +58,7 @@ while True:
     opcode_val = int(w[0:5], 2)
     opcode = opcode_map[opcode_val]
     format = INSTRUCTION_FORMATS[opcode]
-    # [("REG", 3), ("REG", 3), ("REG", 3)]
+    # expected format: [("REG", 3), ("REG", 3), ("REG", 3)]
     last_index = 5
     args: list[int] = [0] * 3
     for (i, data) in enumerate(format):
@@ -109,7 +109,7 @@ while True:
                 pc = args[1]
             
         case "JAL":
-            reg[args[0]] = pc + 1
+            reg[args[0]] = pc # pc already incremented in fetch
             pc = args[1]
             
         case "JMPR":
@@ -134,6 +134,7 @@ while True:
         case "HALT":
             break
 
+# debug
     #print(f"line {pc}:")
     #print(opcode)
     #print(format)
