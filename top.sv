@@ -242,8 +242,8 @@ module top(
                         end else if (wait_jump == 2'd1) begin 
                             RAM_addr <= overflow_16to8b(regData1);
                         end else if (wait_jump == 2'd3) begin 
-                            RAM_in   <= {16'b0, regData1};
-                            RAM_write_enable <= WRITE;
+                            data_in   <= RAM_out[15:0];
+                            write_enable <= WRITE;
                             state <= FETCH;
                         end
                     end
