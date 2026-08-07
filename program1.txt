@@ -1,0 +1,18 @@
+; Fibonacci sequence
+
+LOADI R0 1      ; first operand
+LOADI R1 1      ; second operand
+LOADI R2 0      ; result
+LOADI R3 7      ; loop time
+LOADI R4 1      ; constant
+
+LABEL:
+    ADD R2 R0 R1    ; Add the two terms
+    MOV R0 R1       ; Move the two operands
+    MOV R1 R2       ; --
+
+    SUB R3 R3 R4    ; decrement 1
+    STORE R2 65500  ; print to display
+    JNZ R3 LABEL    ; Jump back to Label
+
+HALT            ; --

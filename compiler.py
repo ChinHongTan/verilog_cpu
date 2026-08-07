@@ -155,7 +155,13 @@ with open("program.txt", "r", encoding="utf-8") as f:
             arg2 = label_name.get(temp_instruction[2], None) # label - 16 bit
             if arg2 == None:
                 raise ValueError(f"Label {temp_instruction[2]} not found.")
-        elif opcode in ('ADD', 'SUB', 'MUL', 'DIV', 'BEQ', 'BNE', 'BLT', 'BGE'): # ALU / Branch, 3 args
+        elif opcode in ('BEQ', 'BNE', 'BLT', 'BGE'):
+            arg1 = temp_instruction[1]
+            arg2 = temp_instruction[2]
+            arg3 = label_name.get(temp_instruction[3], None) # label
+            if arg3 == None:
+                raise ValueError(f"Label {temp_instruction[3]} not found.")
+        elif opcode in ('ADD', 'SUB', 'MUL', 'DIV'): # ALU / Branch, 3 args
             arg1 = temp_instruction[1]
             arg2 = temp_instruction[2]
             arg3 = temp_instruction[3]
