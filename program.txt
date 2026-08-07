@@ -1,15 +1,12 @@
 ; for i in range(2, 10):
 ;     is_prime = True
-;     for j in range(1, i // 2 + 1):
+;     for j in range(2, i // 2):
 ;         result = i // j
 ;         if result * j == i:
-;             if j == 1 or j == i:
-;                 continue
-;             else:
-;                 is_prime = False
+;             is_prime = False
+;             break
 ;     if is_prime:
 ;         print(f"======{i} is a prime.=====")
-
 
 LOADI R0 2 ; Start from 2 (i)
 LOADI R1 1 ; Increment 1
@@ -18,13 +15,23 @@ LOADI R2 10 ; End at 10
 LOOP:
     LOADI R3 1 ; is_prime = true
     STORE R0 65500
-    LOADI R4 1 ; inner loop start from 1 (j)
+    LOADI R4 2 ; inner loop start from 2 (j)
     LOADI R5 2 ; constant 2
     DIV R6 R0 R5 ; i // 2
-    ADD R6 R6 R1 ; i + 1
+
     INNER:
         DIV R7 R0 R4
-        BEQ R7 
+        MUL R2 R7 R5
+        BEQ R2 R0 NOT_PRIME
+        NOT_PRIME:
+            LOADI R3 0
+            JMP LOOP
+        ADD R4 R4 R1
+        BNE R4 R6 INNER
+    BEQ R3 R1 IS_PRIME
+    IS_PRIME:
+        STORE R0 65500
     ADD R0 R0 R1
+    LOADI R2 10 ; Reload 10
     BNE R0 R2 LOOP
     HALT

@@ -138,8 +138,10 @@ with open("program.txt", "r", encoding="utf-8") as f:
         arg2 = None
         arg3 = None
 
-        if len(temp_instruction) - 1 != len(INSTRUCTION_FORMATS[opcode]):
-            raise IndexError(f"Argument provided does not match. Needed {len(INSTRUCTION_FORMATS[opcode])}, got {len(temp_instruction) - 1} instead.")
+        if opcode == 'JMP' and len(temp_instruction) != 2:
+            raise IndexError(f"Argument provided does not match. Needed {len(INSTRUCTION_FORMATS[opcode])}, got {len(temp_instruction) - 1} instead. Instruction: {temp_instruction}")
+        elif len(temp_instruction) - 1 != len(INSTRUCTION_FORMATS[opcode]) and opcode != 'JMP':
+            raise IndexError(f"Argument provided does not match. Needed {len(INSTRUCTION_FORMATS[opcode])}, got {len(temp_instruction) - 1} instead. Instruction: {temp_instruction}")
 
         if opcode == 'HALT':
             pass

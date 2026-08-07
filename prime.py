@@ -1,11 +1,11 @@
 for i in range(2, 10):
     is_prime = True
-    for j in range(1, i // 2 + 1):
+    print("Turn", i)
+    for j in range(2, i // 2):
+        print("Check", j, "against", i // 2)
         result = i // j
         if result * j == i:
-            if j == 1 or j == i:
-                continue
-            else:
-                is_prime = False
+            is_prime = False
+            break
     if is_prime:
         print(f"======{i} is a prime.=====")

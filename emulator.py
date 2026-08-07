@@ -135,7 +135,7 @@ while True:
             break
 
 # debug
-    # print(f"line {pc}:")
-    # print(opcode)
-    # print(format)
-    # print(reg, args)
+    print(f"line {pc}:")
+    print(opcode)
+    print(format)
+    print(reg, args)
