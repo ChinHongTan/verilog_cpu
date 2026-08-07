@@ -226,8 +226,8 @@ module top(
                             end
                         end else if (wait_jump == 2'b0) begin 
                             address1 <= adrA;
-                            RAM_addr <= imm_max;
                         end else if (wait_jump == 2'b1) begin 
+                            RAM_addr <= imm_max;
                             RAM_in   <= {16'b0, regData1};
                             RAM_write_enable <= WRITE;
                         end else if (wait_jump == 2'd2)  begin 
@@ -237,13 +237,13 @@ module top(
 
                     OP_STORER: begin 
                         if (wait_jump == 2'b0) begin 
-                            address_write <= adrA;
-                            address1 <= adrB;
+                            address1 <= adrA;
+                            address2 <= adrB;
                         end else if (wait_jump == 2'd1) begin 
-                            RAM_addr <= overflow_16to8b(regData1);
-                        end else if (wait_jump == 2'd3) begin 
-                            data_in   <= RAM_out[15:0];
-                            write_enable <= WRITE;
+                            RAM_addr <= overflow_16to8b(regData2);
+                            RAM_in   <= {16'b0, regData1};
+                            RAM_write_enable <= WRITE;
+                        end else if (wait_jump == 2'd2) begin 
                             state <= FETCH;
                         end
                     end
@@ -264,7 +264,7 @@ module top(
                             data_in       <= 16'(pc);
                             write_enable  <= WRITE;
                             pc            <= overflow_16to8b(imm);
-                        end else if (wait_jump == 2'b1) begin
+                        end else if (wait_jump == 2'd1) begin
                             state <= FETCH;
                         end
                     end 
@@ -291,7 +291,7 @@ module top(
                             ) begin 
                                 pc <= overflow_16to8b(branch_imm);
                             end
-                        end else if (wait_jump == 2'd3) begin 
+                        end else if (wait_jump == 2'd2) begin 
                             state <= FETCH;
                         end
                     end
