@@ -138,7 +138,7 @@ module top(
                 state    <= EXECUTE;
                 wait_jump <= 0;
             end
-            EXECUTE: begin //TODO ALU & EXECUTE 協調部分
+            EXECUTE: begin
                 case (opcode)
                     OP_ADD, OP_SUB, OP_MUL, OP_DIV: begin : ALU_Operation
                         address_write <= adrA;
@@ -169,49 +169,6 @@ module top(
                             state <= FETCH;
                         end
                     end
-
-                    OP_LOADI: begin
-                        address_write <= adrA;
-                        data_in       <= imm;
-                        write_enable  <= WRITE;
-
-                        state <= FETCH;
-                    end
-                    OP_JMP: begin
-                        pc <= imm_max;
-
-                        if (wait_jump == 2'b1) state <= FETCH;
-                    end
-                    OP_JMPR: begin
-                        if (wait_jump == 2'b0) begin 
-                            address1 <= adrA;
-                        end else if (wait_jump == 2'b1) begin 
-                            pc <= overflow_16to8b(regData1);
-                        end else if (wait_jump == 2'd2) begin 
-                            state <= FETCH;
-                        end
-                    end
-                    OP_JNZ: begin
-                             if (wait_jump == 2'b0) address1 <= adrA;
-                        else if (wait_jump == 2'b1) begin if (regData1 != 0) pc <= imm_max; end
-                        else if (wait_jump == 2'd2) state <= FETCH;
-                    end
-
-                    OP_JAL: begin
-                        if (wait_jump == 2'b0) begin
-                            address_write <= adrA;
-                            data_in       <= 16'(pc);
-                            write_enable  <= WRITE;
-                            pc            <= overflow_16to8b(imm);
-                        end else if (wait_jump == 2'b1) begin
-                            state <= FETCH;
-                        end
-                    end 
-
-                    OP_HALT: begin
-                        state <= HALT;
-                    end
-
                     OP_MOV: begin
                         address_write <= adrA;
                         address1      <= adrB;
@@ -222,6 +179,39 @@ module top(
                             state <= FETCH;
                         end  
                     end
+
+                    OP_LOAD: begin
+                        if (wait_jump == 2'b0) begin 
+                            address_write <= adrA;
+                            RAM_addr <= imm_max;
+                        end else if (wait_jump == 2'd2) begin 
+                            data_in <= RAM_out[15:0];
+                            write_enable <= WRITE;
+                            state <= FETCH;
+                        end
+                    end
+
+                    OP_LOADI: begin
+                        address_write <= adrA;
+                        data_in       <= imm;
+                        write_enable  <= WRITE;
+
+                        state <= FETCH;
+                    end
+
+                    OP_LOADR: begin // LOADR R0 R1 ; R0 = BRAM[R1]
+                        if (wait_jump == 2'b0) begin 
+                            address_write <= adrA;
+                            address1 <= adrB;
+                        end else if (wait_jump == 2'd1) begin 
+                            RAM_addr <= overflow_16to8b(regData1);
+                        end else if (wait_jump == 2'd3) begin 
+                            data_in <= RAM_out[15:0];
+                            write_enable <= WRITE;
+                            state <= FETCH;
+                        end
+                    end
+
                     OP_STORE: begin
                         if (imm >= 16'd65_500) begin
                             if (wait_jump == 2'b0) begin 
@@ -246,31 +236,48 @@ module top(
                     end
 
                     OP_STORER: begin 
-                        //TODO
-                    end
-                    OP_LOAD: begin
-                        if (wait_jump == 2'b0) begin 
-                            address_write <= adrA;
-                            RAM_addr <= imm_max;
-                        end else if (wait_jump == 2'd2) begin 
-                            data_in <= RAM_out[15:0];
-                            write_enable <= WRITE;
-                            state <= FETCH;
-                        end
-                    end
-
-                    OP_LOADR: begin // LOADR R0 R1 ; R0 = BRAM[R1]
                         if (wait_jump == 2'b0) begin 
                             address_write <= adrA;
                             address1 <= adrB;
                         end else if (wait_jump == 2'd1) begin 
                             RAM_addr <= overflow_16to8b(regData1);
                         end else if (wait_jump == 2'd3) begin 
-                            data_in <= RAM_out[15:0];
-                            write_enable <= WRITE;
+                            RAM_in   <= {16'b0, regData1};
+                            RAM_write_enable <= WRITE;
                             state <= FETCH;
                         end
                     end
+
+                    OP_JMP: begin
+                        pc <= imm_max;
+
+                        if (wait_jump == 2'b1) state <= FETCH;
+                    end
+                    OP_JNZ: begin
+                             if (wait_jump == 2'b0) address1 <= adrA;
+                        else if (wait_jump == 2'b1) begin if (regData1 != 0) pc <= imm_max; end
+                        else if (wait_jump == 2'd2) state <= FETCH;
+                    end
+                    OP_JAL: begin
+                        if (wait_jump == 2'b0) begin
+                            address_write <= adrA;
+                            data_in       <= 16'(pc);
+                            write_enable  <= WRITE;
+                            pc            <= overflow_16to8b(imm);
+                        end else if (wait_jump == 2'b1) begin
+                            state <= FETCH;
+                        end
+                    end 
+                    OP_JMPR: begin
+                        if (wait_jump == 2'b0) begin 
+                            address1 <= adrA;
+                        end else if (wait_jump == 2'b1) begin 
+                            pc <= overflow_16to8b(regData1);
+                        end else if (wait_jump == 2'd2) begin 
+                            state <= FETCH;
+                        end
+                    end
+
 
                     OP_BEQ, OP_BNE, OP_BLT, OP_BGE: begin
                         if (wait_jump == 2'b0) begin 
@@ -288,9 +295,10 @@ module top(
                             state <= FETCH;
                         end
                     end
-
                     
-                    
+                    OP_HALT: begin
+                        state <= HALT;
+                    end
 
                     default: begin
                         state <= FETCH;

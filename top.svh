@@ -29,6 +29,7 @@
 
 	// MARK: Instructions
 	typedef enum logic [4:0] {
+		OP_NOP	  = 5'd0,
 		OP_ADD    = 5'd1,
         OP_SUB    = 5'd2,
         OP_MUL    = 5'd3,

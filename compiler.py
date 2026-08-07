@@ -10,6 +10,7 @@ from typing import Literal
 import re
 
 class Opcode(IntEnum):
+    NOP    = 0
     ADD    = 1
     SUB    = 2
     MUL    = 3
@@ -45,6 +46,7 @@ class Register(IntEnum):
 type DataType = Literal["REG", "IMM", "BRAM", "LABEL"]
 
 INSTRUCTION_FORMATS: dict[str, list[tuple[DataType, int]]] = {
+    "NOP":      [],                                         # 0 args
     "ADD":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
     "SUB":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
     "MUL":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
@@ -149,7 +151,7 @@ with open("program.txt", "r", encoding="utf-8") as f:
         elif len(temp_instruction) - 1 != len(INSTRUCTION_FORMATS[opcode]) and opcode != 'JMP':
             raise IndexError(f"Argument provided does not match. Needed {len(INSTRUCTION_FORMATS[opcode])}, got {len(temp_instruction) - 1} instead. Instruction: {temp_instruction}")
 
-        if opcode == 'HALT':
+        if opcode in ('HALT', 'NOP'):
             pass
         elif opcode == 'JMP':
             # expect label in arg1

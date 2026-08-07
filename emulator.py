@@ -1,6 +1,7 @@
 from typing import Literal
 
 opcode_map: dict[int, str] = {
+    0: "NOP",
     1:  "ADD",
     2:  "SUB",
     3:  "MUL",
@@ -27,6 +28,7 @@ opcode_map: dict[int, str] = {
 type DataType = Literal["REG", "IMM", "BRAM", "LABEL"]
 
 INSTRUCTION_FORMATS: dict[str, list[tuple[DataType, int]]] = {
+    "NOP":      [],                                         # 0 args
     "ADD":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
     "SUB":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
     "MUL":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
@@ -60,9 +62,11 @@ with open("ex1.mem", "r", encoding="utf-8") as f:
 
 pc = 0
 while True:
+    decoded_instruction = []
     w = words[pc]
     opcode_val = int(w[0:5], 2)
     opcode = opcode_map[opcode_val]
+    decoded_instruction.append(opcode)
     format = INSTRUCTION_FORMATS[opcode]
     # expected format: [("REG", 3), ("REG", 3), ("REG", 3)]
     last_index = 5
@@ -70,13 +74,28 @@ while True:
     for (i, data) in enumerate(format):
         field_type = data[0]
         width = data[1]
+        val = int(w[last_index:last_index + width], base=2)
+
+        match field_type:
+            case "REG":
+                decoded_instruction.append(f"R{val}")
+            case "BRAM":
+                decoded_instruction.append(f"BRAM[{val}]")
+            case "LABEL":
+                decoded_instruction.append(f"LABEL[{val}]")
+            case "IMM":
+                decoded_instruction.append(f"{val}")
+
         
-        args[i] = int(w[last_index:last_index + width], base=2)
+        args[i] = val
         last_index += width
 
     pc += 1
 
     match opcode:
+        case "NOP":
+            pass
+
         case "ADD":
             reg[args[0]] = reg[args[1]] + reg[args[2]]
             
@@ -151,6 +170,7 @@ while True:
 
 # debug
     print(f"line {pc}:")
-    print(opcode)
-    print(format)
-    print(reg, args)
+    # print(opcode)
+    # print(format)
+    # print(reg, args)
+    print(decoded_instruction)
