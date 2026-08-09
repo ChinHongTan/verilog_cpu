@@ -167,10 +167,14 @@ else:
 print()
 pc = 0
 print("===== Run =====")
-print("STEP   PC  OPCODE ARGUMENTS                 EFFECTS")
+print("STEP   PC  OPCODE ARGUMENTS          EFFECTS")
 while True:
     if pc >= len(program):
         print(f"\n[Stopped] PC ran off the end of the program (pc={pc}).")
+        break
+
+    if step >= 10000:
+        print("Stopped because of step exceeding 10000.")
         break
 
     state = (pc, tuple(reg))
@@ -207,7 +211,7 @@ while True:
             reg[args[0]] = result & 65535
             
         case "DIV":
-            if reg[args[2]]:
+            if reg[args[2]] == 0:
                 note = f"  <-- Division by zero!"
                 break
             reg[args[0]] = (reg[args[1]] // reg[args[2]]) & 65535
