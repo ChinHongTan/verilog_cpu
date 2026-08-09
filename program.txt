@@ -10,7 +10,7 @@
 
 LOADI R0 2 ; Start from 2 (i)
 LOADI R1 1 ; Increment 1
-LOADI R2 10 ; End at 10
+LOADI R2 10 ; End at 9
 
 LOOP:
     LOADI R3 1 ; is_prime = true

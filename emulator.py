@@ -86,6 +86,54 @@ def disasm(opcode: str | None, operands: list[int]):
 
     return f"{opcode:<7}{' '.join(parts)}"
 
+def target_of(opcode: str, operands: list[int]):
+    if opcode in ("BEQ", "BNE", "BLT", "BGE"):
+        return operands[2]
+    if opcode in ("JMP", "JNZ", "JAL"):
+        return operands[1]
+    return None
+
+def check(program):
+    problems = []
+    for pc, (opcode, operands) in enumerate(program):
+        if opcode is None:
+            problems.append((pc, "Error", "Undecodeable instruction"))
+            continue
+        target = target_of(opcode, operands)
+        if target is None:
+            continue # not a jump
+        elif target >= len(program):
+            problems.append((pc, "Error", f"Target {target} is past the end of program"))
+        elif target == pc + 1:
+            problems.append((pc, "Error", f"Jump to {target}, which is the next instruction (pc + 1). Both path leads to the same place, so the branch can never run."))
+
+    seen = set()
+    stack = [0]
+    while stack:
+        pc = stack.pop()
+        if pc in seen or pc >= len(program):
+            continue # already seen this path / program out of bound
+        seen.add(pc)
+        opcode, operands = program[pc]
+        if opcode == "HALT":
+            continue
+        elif opcode == "JMPR":
+            problems.append((pc, "Info", f"Indirect jump target unresolveable. Skipping."))
+            continue
+        elif opcode == "JMP":
+            stack.append(operands[1])
+            continue # unconditional jump, only check the jump dest
+        target = target_of(opcode, operands)
+        if target is not None:
+            stack.append(target) # check the branch, do not exit out of loop
+        stack.append(pc + 1)
+
+    for pc in range(len(program)):
+        if pc not in seen:
+            problems.append((pc, "Warn", "unreachable: nothing jumps or falls through to here"))
+    
+    return problems
+
 reg = [0] * 8
 Bram = [0] * 256  # 256 words of 32 bits each
 
@@ -99,19 +147,39 @@ def load():
             decoded_instructions.append(decode(w))
     return decoded_instructions
 
-pc = 0
-
+step = 0
 program = load()
+seen_states: dict[tuple[int, tuple[int, ...]], int] = {}
+outputs:list[int] = []
 print("===== Disassembly =====")
 for i, (o, a) in enumerate(program):
     print(f"{i:<4}{disasm(o, a)}")
 
 print()
+problems = check(program)
+print("===== Program Check =====")
+if problems:
+    for pc, level, message in problems:
+        print(f"[{level}] pc {pc}: {message}")
+else:
+    print("Clean")
+
+print()
+pc = 0
 print("===== Run =====")
 print("STEP   PC  OPCODE ARGUMENTS                 EFFECTS")
-for a in range(40):
-    inst = program[pc]
-    opcode, args = inst
+while True:
+    if pc >= len(program):
+        print(f"\n[Stopped] PC ran off the end of the program (pc={pc}).")
+        break
+
+    state = (pc, tuple(reg))
+    if state in seen_states:
+        print(f"\n[Stopped] Infinite loop: Step {step} reached the exact same state as step {seen_states[state]}.")
+        print(f"          pc={pc} " + " ".join(f"R{i}={reg[i]}" for i in range(8)))
+        break
+    seen_states[state] = step
+    opcode, args = program[pc]
     pc += 1
     note = ""
     before = reg.copy()
@@ -121,22 +189,40 @@ for a in range(40):
             pass
 
         case "ADD":
-            reg[args[0]] = reg[args[1]] + reg[args[2]]
+            result = reg[args[1]] + reg[args[2]]
+            if result > 65535:
+                note = f"  <-- overflow, {result} wraps to {result & 65535}"
+            reg[args[0]] = result & 65535
             
         case "SUB":
-            reg[args[0]] = reg[args[1]] - reg[args[2]]
+            result = reg[args[1]] - reg[args[2]]
+            if result < 0:
+                note = f"  <-- underflow, {result} wraps to {result & 65535}"
+            reg[args[0]] = result & 65535
             
         case "MUL":
-            reg[args[0]] = reg[args[1]] * reg[args[2]]
+            result = reg[args[1]] * reg[args[2]]
+            if result > 65535:
+                note = f"  <-- overflow, {result} wraps to {result & 65535}"
+            reg[args[0]] = result & 65535
             
         case "DIV":
-            reg[args[0]] = reg[args[1]] // reg[args[2]]
+            if reg[args[2]]:
+                note = f"  <-- Division by zero!"
+                break
+            reg[args[0]] = (reg[args[1]] // reg[args[2]]) & 65535
 
         case "ADDI":
-            reg[args[0]] = reg[args[1]] + args[2]
+            result = reg[args[1]] + args[2]
+            if result > 65535:
+                note = f"  <-- overflow, {result} wraps to {result & 65535}"
+            reg[args[0]] = result & 65535
 
         case "SUBI":
-            reg[args[0]] = reg[args[1]] - args[2]
+            result = reg[args[1]] - args[2]
+            if result < 0:
+                note = f"  <-- underflow, {result} wraps to {result & 65535}"
+            reg[args[0]] = result & 65535
             
         case "MOV":
             reg[args[0]] = reg[args[1]]
@@ -152,6 +238,7 @@ for a in range(40):
             
         case "STORE": # BRAM
             if args[1] >= 65500:
+                outputs.append(reg[args[0]])
                 note += f"OUTPUT: {reg[args[0]]}"
             else:
                 Bram[args[1]] = reg[args[0]]
@@ -163,6 +250,7 @@ for a in range(40):
             pc = args[1]
             
         case "JNZ":
+            note = f"  [R{args[0]}={reg[args[0]]} -> {'taken' if reg[args[0]] != 0 else 'fall through'}]"
             if reg[args[0]] != 0:
                 pc = args[1]
             
@@ -174,18 +262,22 @@ for a in range(40):
             pc = reg[args[0]]
             
         case "BEQ":
+            note = f"  [R{args[0]}={reg[args[0]]} -> {'taken' if reg[args[0]] == reg[args[1]] else 'fall through'}]"
             if reg[args[0]] == reg[args[1]]:
                 pc = args[2]
             
         case "BNE":
+            note = f"  [R{args[0]}={reg[args[0]]} -> {'taken' if reg[args[0]] != reg[args[1]] else 'fall through'}]"
             if reg[args[0]] != reg[args[1]]:
                 pc = args[2]           
             
         case "BLT":
+            note = f"  [R{args[0]}={reg[args[0]]} -> {'taken' if reg[args[0]] <  reg[args[1]] else 'fall through'}]"
             if reg[args[0]] <  reg[args[1]]:
                 pc = args[2]
             
         case "BGE":
+            note = f"  [R{args[0]}={reg[args[0]]} -> {'taken' if reg[args[0]] >= reg[args[1]] else 'fall through'}]"
             if reg[args[0]] >= reg[args[1]]:
                 pc = args[2]
             
@@ -196,5 +288,8 @@ for a in range(40):
         if reg[i] != before[i]:
             changed.append(f"R{i}:{before[i]}->{reg[i]}")
     
-# debug
-    print(f"{a+1:>4}  {pc:>3}  {disasm(opcode, args):<24}  {" ".join(changed)}  {note}")
+    # debug
+    print(f"{step:>4}  {pc:>3}  {disasm(opcode, args):<24}  {" ".join(changed)}  {note}")
+    step += 1
+
+print(f"Outputs: {outputs}")
