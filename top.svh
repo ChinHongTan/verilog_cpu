@@ -51,7 +51,15 @@
 		OP_BLT    = 5'd19,
 		OP_BGE    = 5'd20,
         OP_HALT   = 5'd21
-		} operation_t;
+	} operation_t;
+
+    typedef enum logic [2:0] {
+        FETCH       = 3'd0,
+        DECODE      = 3'd1,
+        EXECUTE     = 3'd2,
+        WRITE_RAM   = 3'd3,
+        WRITE_REG   = 3'd4
+    } stage_t;
 
 	typedef enum logic [0:0] {
 		false = 1'b0,

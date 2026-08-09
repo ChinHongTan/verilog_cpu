@@ -7,7 +7,7 @@ module top(
     output [7:0] seg,
     output [3:0] an
 );
-    import FSM_State_Pkg::*;
+    //import FSM_State_Pkg::*;
 
     wire rst_n = sw[0];
     wire pause = sw[15];
@@ -39,11 +39,11 @@ module top(
     );
     //assign clk_1Hz = clk; // for testBench debug
 
-    Registers TODO (
+    Registers reg_inst(
         .clk(clk_1Hz),
         .rst_n,
-        .address1(address1[2:0]),
-        .address2(address2[2:0]),
+        .address1,
+        .address2,
         .data_out1(regData1),
         .data_out2(regData2),
 
@@ -71,7 +71,7 @@ module top(
         .out(RAM_out)
     );
 
-    state_t state;
+    FSM_State_Pkg::state_t state;
     control_unit CU(
         .clk(clk_1Hz),
         .rst_n,
@@ -96,7 +96,7 @@ module top(
     ALU_Pkg::ALU_state_t ALU_state;                                 // 1 cycle delay
     operation_t opcode;
     logic ALU_op;
-    logic [1:0] wait_jump;                                          // delay for RAM updating
+    stage_t stage;                                                  // delay for RAM updating
 
     logic [26:5] current_ir;                                        // instruction register
     wire [`REG_ADDR - 1:0] adrA = current_ir[26:24];                // first reg
@@ -120,7 +120,7 @@ module top(
             address2 <= 0;
             pc <= 0;
             ALU_op <= 0;
-            state <= IDLE;
+            state <= FSM_State_Pkg::IDLE;
             current_ir <= 0;
 
             in3 <= 4'b0;
@@ -128,23 +128,23 @@ module top(
             in1 <= 4'b0;
             in0 <= 4'b0;
         end else if (!pause) case (state)
-            IDLE: begin
-                state <= FETCH;
+            FSM_State_Pkg::IDLE: begin
+                state <= FSM_State_Pkg::FETCH;
             end
-            FETCH: begin : save_ir
+            FSM_State_Pkg::FETCH: begin : save_ir
                 current_ir <= command[26:5];
                 opcode   <= operation_t'(command[31:27]);
                 pc <= pc + 1;
-                state    <= EXECUTE;
-                wait_jump <= 0;
+                state    <= FSM_State_Pkg::EXECUTE;
             end
-            EXECUTE: begin
+            FSM_State_Pkg::EXECUTE: begin
                 case (opcode)
                     OP_ADD, OP_SUB, OP_MUL, OP_DIV: begin : ALU_Operation
-                        address_write <= adrA;
-                        address1      <= adrB;
-                        address2      <= adrC;
-                        if (wait_jump == 2'b1) begin
+                        if (stage == DECODE) begin
+                            address_write <= adrA;
+                            address1      <= adrB;
+                            address2      <= adrC;
+                        end if (stage == EXECUTE) begin
                             ALU_Data1 <= regData1;
                             ALU_Data2 <= regData2;
                             ALU_op <= 1;
@@ -152,13 +152,14 @@ module top(
                             write_enable <= WRITE;
                             data_in <= result;
                             ALU_op <= 0;
-                            state <= FETCH;
+                            state <= FSM_State_Pkg::FETCH;
                         end
                     end
                     OP_ADDI, OP_SUBI: begin
-                        address_write <= adrA;
-                        address1      <= adrB;
-                        if (wait_jump == 2'b1) begin
+                        if (stage == DECODE) begin
+                            address_write <= adrA;
+                            address1      <= adrB;
+                        end if (stage == EXECUTE) begin
                             ALU_Data1 <= regData1;
                             ALU_Data2 <= imm;
                             ALU_op <= 1;
@@ -166,124 +167,129 @@ module top(
                             write_enable <= WRITE;
                             data_in <= result;
                             ALU_op <= 0;
-                            state <= FETCH;
+                            state <= FSM_State_Pkg::FETCH;
                         end
                     end
                     OP_MOV: begin
-                        address_write <= adrA;
-                        address1      <= adrB;
-                        if (wait_jump == 2'b1) begin
+                        if (stage == DECODE) begin
+                            address_write <= adrA;
+                            address1      <= adrB;
+                        end if (stage == WRITE_REG) begin
                             data_in <= regData1;
                             write_enable <= WRITE;
 
-                            state <= FETCH;
+                            state <= FSM_State_Pkg::FETCH;
                         end  
                     end
 
                     OP_LOAD: begin
-                        if (wait_jump == 2'b0) begin 
+                        if (stage == DECODE) begin 
                             address_write <= adrA;
                             RAM_addr <= imm_max;
-                        end else if (wait_jump == 2'd2) begin 
+                        end else if (stage == WRITE_REG) begin 
                             data_in <= RAM_out[15:0];
                             write_enable <= WRITE;
-                            state <= FETCH;
+                            state <= FSM_State_Pkg::FETCH;
                         end
                     end
 
                     OP_LOADI: begin
-                        address_write <= adrA;
-                        data_in       <= imm;
-                        write_enable  <= WRITE;
+                        if (stage == DECODE) begin
+                            address_write <= adrA;
+                            data_in       <= imm;
+                            write_enable  <= WRITE;
 
-                        state <= FETCH;
+                            state <= FSM_State_Pkg::FETCH;
+                        end
                     end
 
                     OP_LOADR: begin // LOADR R0 R1 ; R0 = BRAM[R1]
-                        if (wait_jump == 2'b0) begin 
+                        if (stage == DECODE) begin 
                             address_write <= adrA;
                             address1 <= adrB;
-                        end else if (wait_jump == 2'd1) begin 
+                        end else if (stage == EXECUTE) begin 
                             RAM_addr <= overflow_16to8b(regData1);
-                        end else if (wait_jump == 2'd3) begin 
+                        end else if (stage == WRITE_REG) begin 
                             data_in <= RAM_out[15:0];
                             write_enable <= WRITE;
-                            state <= FETCH;
+                            state <= FSM_State_Pkg::FETCH;
                         end
                     end
 
                     OP_STORE: begin
-                        if (imm >= 16'd65_500) begin
-                            if (wait_jump == 2'b0) begin 
-                                address1 <= adrA;
-                            end else if (wait_jump == 2'b1) begin : seg_control
+                        if (stage == DECODE) begin 
+                            address1 <= adrA;
+                        end else if (stage == EXECUTE) begin 
+                            if (imm >= 16'd65_500) begin : update_display
                                 in3 <= 4'(32'(regData1 / 1000) % 10);
                                 in2 <= 4'(32'(regData1 / 100) % 10);
                                 in1 <= 4'(32'(regData1 / 10) % 10);
                                 in0 <= 4'(regData1 % 10);
 
-                                state <= FETCH;
+                                state <= FSM_State_Pkg::FETCH;
+                            end else begin 
+                                RAM_addr <= imm_max;
                             end
-                        end else if (wait_jump == 2'b0) begin 
-                            address1 <= adrA;
-                        end else if (wait_jump == 2'b1) begin 
-                            RAM_addr <= imm_max;
+                        end else if (stage == WRITE_RAM) begin
                             RAM_in   <= {16'b0, regData1};
                             RAM_write_enable <= WRITE;
-                        end else if (wait_jump == 2'd2)  begin 
-                            state <= FETCH;
+                        end else if (stage == WRITE_REG)  begin 
+                            state <= FSM_State_Pkg::FETCH;
                         end
                     end
 
                     OP_STORER: begin 
-                        if (wait_jump == 2'b0) begin 
+                        if (stage == DECODE) begin 
                             address1 <= adrA;
                             address2 <= adrB;
-                        end else if (wait_jump == 2'd1) begin 
+                        end else if (stage == EXECUTE) begin 
                             RAM_addr <= overflow_16to8b(regData2);
+                        end else if (stage == WRITE_RAM) begin
                             RAM_in   <= {16'b0, regData1};
                             RAM_write_enable <= WRITE;
-                        end else if (wait_jump == 2'd2) begin 
-                            state <= FETCH;
+                        end else if (stage == WRITE_REG) begin 
+                            state <= FSM_State_Pkg::FETCH;
                         end
                     end
 
                     OP_JMP: begin
-                        pc <= imm_max;
-
-                        if (wait_jump == 2'b1) state <= FETCH;
+                        if (stage == EXECUTE) begin
+                            pc <= imm_max;
+                        end else if (stage == WRITE_RAM) state <= FSM_State_Pkg::FETCH;
                     end
                     OP_JNZ: begin
-                             if (wait_jump == 2'b0) address1 <= adrA;
-                        else if (wait_jump == 2'b1) begin if (regData1 != 0) pc <= imm_max; end
-                        else if (wait_jump == 2'd2) state <= FETCH;
+                             if (stage == DECODE) address1 <= adrA;
+                        else if (stage == EXECUTE) begin if (regData1 != 0) pc <= imm_max; end
+                        else if (stage == WRITE_RAM) state <= FSM_State_Pkg::FETCH;
                     end
                     OP_JAL: begin
-                        if (wait_jump == 2'b0) begin
+                        if (stage == DECODE) begin
                             address_write <= adrA;
-                            data_in       <= 16'(pc);
+                        end else if (stage == EXECUTE) begin
                             write_enable  <= WRITE;
                             pc            <= overflow_16to8b(imm);
-                        end else if (wait_jump == 2'd1) begin
-                            state <= FETCH;
+                        end else if (stage == WRITE_RAM) begin
+                            state <= FSM_State_Pkg::FETCH;
+                        end else if (stage == WRITE_REG) begin
+                            data_in       <= 16'(pc);
                         end
-                    end 
+                    end
                     OP_JMPR: begin
-                        if (wait_jump == 2'b0) begin 
+                        if (stage == DECODE) begin 
                             address1 <= adrA;
-                        end else if (wait_jump == 2'b1) begin 
+                        end else if (stage == EXECUTE) begin 
                             pc <= overflow_16to8b(regData1);
-                        end else if (wait_jump == 2'd2) begin 
-                            state <= FETCH;
+                        end else if (stage == WRITE_RAM) begin 
+                            state <= FSM_State_Pkg::FETCH;
                         end
                     end
 
 
                     OP_BEQ, OP_BNE, OP_BLT, OP_BGE: begin
-                        if (wait_jump == 2'b0) begin 
+                        if (stage == DECODE) begin 
                             address1 <= adrA;
                             address2 <= adrB;
-                        end else if (wait_jump == 2'd1) begin 
+                        end else if (stage == EXECUTE) begin 
                             if ((opcode == OP_BEQ && regData1 == regData2) ||
                                 (opcode == OP_BNE && regData1 != regData2) ||
                                 (opcode == OP_BLT && regData1 <  regData2) ||
@@ -291,23 +297,25 @@ module top(
                             ) begin 
                                 pc <= overflow_16to8b(branch_imm);
                             end
-                        end else if (wait_jump == 2'd2) begin 
-                            state <= FETCH;
+                        end else if (stage == WRITE_RAM) begin 
+                            state <= FSM_State_Pkg::FETCH;
                         end
                     end
                     
                     OP_HALT: begin
-                        state <= HALT;
+                        if (stage == DECODE) begin
+                            state <= FSM_State_Pkg::HALT;
+                        end
                     end
 
                     default: begin
-                        state <= FETCH;
+                        state <= FSM_State_Pkg::FETCH;
                     end
                 endcase
-                wait_jump <= wait_jump + 1;
+                stage <= stage.next();
             end
-            HALT: begin
-                state <= HALT; // stay in HALT state
+            FSM_State_Pkg::HALT: begin
+                state <= FSM_State_Pkg::HALT; // stay in HALT state
             end
         endcase
     end
@@ -334,3 +342,4 @@ module top(
         endcase
     end
 endmodule
+

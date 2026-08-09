@@ -42,3 +42,23 @@ end
 
 
     https://projectf.io/posts/initialize-memory-in-verilog/
+
+
+# Fetch-Decode Pipeline
+fetch block will fetch the instruction bits of the next instruction
+fetch block will have to store the instruction bits in a register by the end of the current cycle
+
+# Decode-Execute Pipeline
+decoder outputs 
+- the source and destination registers of the instruction
+- the immediate value in the instruction
+- various control signals (denote the type of the instruction)
+
+append the data from the fetch block, and pipeline all these signals to the execute block.
+
+# Execute-Memory Pipeline
+execute block consists of just one ALU
+for memory instructions and branch instructions
+In memory instructions, the ALU computes the address to read/write data from
+In branch instructions, the ALU computes the target address, and the CPU jumps to that target and the CPU jumps
+
