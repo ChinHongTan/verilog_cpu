@@ -52,45 +52,69 @@ INSTRUCTION_FORMATS: dict[str, list[tuple[DataType, int]]] = {
     "HALT":     [],                                         # 0 args
 }
 
+def decode(word: str) -> tuple[None | str, list[int]]:
+    opcode_val = int(word[0:5], 2)
+    if opcode_val not in opcode_map:
+        return None, []
+    opcode = opcode_map[opcode_val]
+    
+    format = INSTRUCTION_FORMATS[opcode]
+    last_index = 5
+    operands: list[int] = []
+    for data in format:
+        width = data[1]
+        val = int(word[last_index:last_index + width], base=2)
+        last_index += width
+        operands.append(val)
+    return opcode, operands
+
+def disasm(opcode: str | None, operands: list[int]):
+    if opcode is None:
+        return "??? undecodable"
+    parts = []
+    for (kind, _w), val in zip(INSTRUCTION_FORMATS[opcode], operands):
+
+        match kind:
+            case "REG":
+                parts.append(f"R{val}")
+            case "BRAM":
+                parts.append("DISPLAY" if val >= 65500 else f"[{val}]")
+            case "LABEL":
+                parts.append(f"{val}")
+            case "IMM":
+                parts.append(f"{val}")
+
+    return f"{opcode:<7}{' '.join(parts)}"
+
 reg = [0] * 8
-words: list[str] = []
 Bram = [0] * 256  # 256 words of 32 bits each
 
-with open("ex1.mem", "r", encoding="utf-8") as f:
-    for line in f:
-        words.append(line)
+def load():
+    decoded_instructions: list[tuple[None | str, list[int]]] = []
+    with open("ex1.mem", "r", encoding="utf-8") as f:
+        words: list[str] = []
+        for line in f:
+            words.append(line)
+        for w in words:
+            decoded_instructions.append(decode(w))
+    return decoded_instructions
 
 pc = 0
-while True:
-    decoded_instruction = []
-    w = words[pc]
-    opcode_val = int(w[0:5], 2)
-    opcode = opcode_map[opcode_val]
-    decoded_instruction.append(opcode)
-    format = INSTRUCTION_FORMATS[opcode]
-    # expected format: [("REG", 3), ("REG", 3), ("REG", 3)]
-    last_index = 5
-    args: list[int] = [0] * 3
-    for (i, data) in enumerate(format):
-        field_type = data[0]
-        width = data[1]
-        val = int(w[last_index:last_index + width], base=2)
 
-        match field_type:
-            case "REG":
-                decoded_instruction.append(f"R{val}")
-            case "BRAM":
-                decoded_instruction.append(f"BRAM[{val}]")
-            case "LABEL":
-                decoded_instruction.append(f"LABEL[{val}]")
-            case "IMM":
-                decoded_instruction.append(f"{val}")
+program = load()
+print("===== Disassembly =====")
+for i, (o, a) in enumerate(program):
+    print(f"{i:<4}{disasm(o, a)}")
 
-        
-        args[i] = val
-        last_index += width
-
+print()
+print("===== Run =====")
+print("STEP   PC  OPCODE ARGUMENTS                 EFFECTS")
+for a in range(40):
+    inst = program[pc]
+    opcode, args = inst
     pc += 1
+    note = ""
+    before = reg.copy()
 
     match opcode:
         case "NOP":
@@ -128,7 +152,7 @@ while True:
             
         case "STORE": # BRAM
             if args[1] >= 65500:
-                print(f"========= output: {reg[args[0]]} =========")
+                note += f"OUTPUT: {reg[args[0]]}"
             else:
                 Bram[args[1]] = reg[args[0]]
 
@@ -167,10 +191,10 @@ while True:
             
         case "HALT":
             break
-
+    changed = []
+    for i in range(8):
+        if reg[i] != before[i]:
+            changed.append(f"R{i}:{before[i]}->{reg[i]}")
+    
 # debug
-    print(f"line {pc}:")
-    # print(opcode)
-    # print(format)
-    # print(reg, args)
-    print(decoded_instruction)
+    print(f"{a+1:>4}  {pc:>3}  {disasm(opcode, args):<24}  {" ".join(changed)}  {note}")
