@@ -43,68 +43,77 @@ class Register(IntEnum):
     R6 = 6
     R7 = 7
 
-type DataType = Literal["REG", "IMM", "BRAM", "LABEL"]
+type DataType = Literal["RD", "RS1", "RS2", "IMM", "BRAM", "LABEL"]
 
 INSTRUCTION_FORMATS: dict[str, list[tuple[DataType, int]]] = {
     "NOP":      [],                                         # 0 args
-    "ADD":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
-    "SUB":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
-    "MUL":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
-    "DIV":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
-    "ADDI":     [("REG", 3), ("REG", 3), ("IMM", 16)],      # [3 bit reg, 3 bit reg, 16 bit literal]
-    "SUBI":     [("REG", 3), ("REG", 3), ("IMM", 16)],      # [3 bit reg, 3 bit reg, 16 bit literal]
-    "MOV":      [("REG", 3), ("REG", 3)],                   # [3 bit reg, 3 bit reg]
-    "LOAD":     [("REG", 3), ("BRAM", 16)],                 # [3 bit reg, 16 bit BRAM]
-    "LOADI":    [("REG", 3), ("IMM", 16)],                  # [3 bit reg, 16 bit literal]
-    "LOADR":    [("REG", 3), ("REG", 3)],                   # [3 bit reg, 3 bit reg]
-    "STORE":    [("REG", 3), ("BRAM", 16)],                 # [3 bit reg, 16 bit BRAM]
-    "STORER":   [("REG", 3), ("REG", 3)],                   # [3 bit reg, 3 bit reg]
-    "JMP":      [("REG", 3), ("LABEL", 16)],                # [3 bit padding, 16 bit label]
-    "JNZ":      [("REG", 3), ("LABEL", 16)],                # [3 bit reg, 16 bit label]
-    "JAL":      [("REG", 3), ("LABEL", 16)],                # [3 bit reg, 16 bit literal]
-    "JMPR":     [("REG", 3)],                               # [3 bit reg]
-    "BEQ":      [("REG", 3), ("REG", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
-    "BNE":      [("REG", 3), ("REG", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
-    "BLT":      [("REG", 3), ("REG", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
-    "BGE":      [("REG", 3), ("REG", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
+    "ADD":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [3 bit reg, 3 bit reg, 3 bit reg]
+    "SUB":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [3 bit reg, 3 bit reg, 3 bit reg]
+    "MUL":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [3 bit reg, 3 bit reg, 3 bit reg]
+    "DIV":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [3 bit reg, 3 bit reg, 3 bit reg]
+    "ADDI":     [("RD", 3), ("RS1", 3), ("IMM", 16)],       # [3 bit reg, 3 bit reg, 16 bit literal]
+    "SUBI":     [("RD", 3), ("RS1", 3), ("IMM", 16)],       # [3 bit reg, 3 bit reg, 16 bit literal]
+    "MOV":      [("RD", 3), ("RS1", 3)],                    # [3 bit reg, 3 bit reg]
+    "LOAD":     [("RD", 3), ("BRAM", 16)],                  # [3 bit reg, 16 bit BRAM]
+    "LOADI":    [("RD", 3), ("IMM", 16)],                   # [3 bit reg, 16 bit literal]
+    "LOADR":    [("RD", 3), ("RS1", 3)],                    # [3 bit reg, 3 bit reg]
+    "STORE":    [("RS1", 3), ("BRAM", 16)],                 # [3 bit reg, 16 bit BRAM]
+    "STORER":   [("RS1", 3), ("RS2", 3)],                   # [3 bit reg, 3 bit reg]
+    "JMP":      [("LABEL", 16)],                            #[16 bit label]
+    "JNZ":      [("RS1", 3), ("LABEL", 16)],                # [3 bit reg, 16 bit label]
+    "JAL":      [("RD", 3), ("LABEL", 16)],                 # [3 bit reg, 16 bit literal]
+    "JMPR":     [("RS1", 3)],                               # [3 bit reg]
+    "BEQ":      [("RS1", 3), ("RS2", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
+    "BNE":      [("RS1", 3), ("RS2", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
+    "BLT":      [("RS1", 3), ("RS2", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
+    "BGE":      [("RS1", 3), ("RS2", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
     "HALT":     [],                                         # 0 args
+}
+
+SLOT_OFFSET: dict[DataType, int] = {
+    "RD": 24,
+    "RS1": 21,
+    "RS2": 18,
+    "IMM": 2,
+    "LABEL": 2,
+    "BRAM": 2
 }
 
 compiled_instruction: list[str] = []
 
 def encode(code: str, arg1: int | str | None = None, arg2: int | str | None = None, arg3: int | str | None = None) -> None:
     print(code, arg1, arg2, arg3)
-    bit_stream = ""
-    opcode_bin = f"{Opcode[code]:05b}" # 5 bit
-    bit_stream += opcode_bin
+    instruction_val = Opcode[code] << 27
 
-    widths = INSTRUCTION_FORMATS[code]
+    formats = INSTRUCTION_FORMATS[code]
     args: list[int | str] = []
     for a in (arg1, arg2, arg3):
         if a is not None:
             args.append(a)
 
-    for i in range(len(args)):
-        val = args[i]  # ADD R0 R1 R2 | LOADI R0 1000 | STORE R0 12
-        width = widths[i]
+    
+    for arg_val, format_spec in zip(args, formats):
+        field_type = format_spec[0]
+        parsed_val = parse_operand(arg_val, format_spec)
+        
+        offset = SLOT_OFFSET[field_type]
+        instruction_val |= (parsed_val << offset)
 
-        bit_stream += parse_operand(val, width) #TODO
-
-    bit_stream = bit_stream.ljust(32, "0") # fill 0 in the end
+    bit_stream = f"{instruction_val:032b}"
     compiled_instruction.append(bit_stream)
 
-def parse_operand(arg: int | str, data: tuple[DataType, int]) -> str:
+def parse_operand(arg: int | str, data: tuple[DataType, int]) -> int:
     """"Turn string code into binary in string form | e.g. ADD = 1 = 00001"""
     field_type = data[0]
     width = data[1]
 
-    if field_type == "REG":
+    if field_type in ("RD", "RS1", "RS2"):
         if isinstance(arg, str) and arg in Register.__members__:
             num = Register[arg].value
         else:
             raise ValueError(f"Expected a Register (e.g., R0), got {arg}")
 
-    elif field_type == "IMM" or "BRAM" or "LABEL":
+    else:
         if isinstance(arg, str) and arg in Register.__members__:
             raise ValueError(f"Expected a number, got Register {arg}")
         try:
@@ -113,9 +122,9 @@ def parse_operand(arg: int | str, data: tuple[DataType, int]) -> str:
             raise ValueError(f"Invalid immediate value '{arg}'") from e
 
 
-    if not (0 <= num <= (2**width) - 1): # (1 << width) - 1 
+    if not (0 <= num <= (1 << width) - 1): # (2 ** width) - 1 
         raise ValueError(f"Immediate value {num} out of range.")
-    return f"{num:0{width}b}"
+    return num
 
 with open("program.txt", "r", encoding="utf-8") as f:
     label_name: dict[str, int] = {}
@@ -146,18 +155,15 @@ with open("program.txt", "r", encoding="utf-8") as f:
         arg2 = None
         arg3 = None
 
-        if opcode == 'JMP' and len(temp_instruction) != 2:
-            raise IndexError(f"Argument provided does not match. Needed {len(INSTRUCTION_FORMATS[opcode])}, got {len(temp_instruction) - 1} instead. Instruction: {temp_instruction}")
-        elif len(temp_instruction) - 1 != len(INSTRUCTION_FORMATS[opcode]) and opcode != 'JMP':
+        if len(temp_instruction) - 1 != len(INSTRUCTION_FORMATS[opcode]):
             raise IndexError(f"Argument provided does not match. Needed {len(INSTRUCTION_FORMATS[opcode])}, got {len(temp_instruction) - 1} instead. Instruction: {temp_instruction}")
 
         if opcode in ('HALT', 'NOP'):
             pass
         elif opcode == 'JMP':
             # expect label in arg1
-            arg1 = "R0" # 3 bit padding for verilog
-            arg2 = label_name.get(temp_instruction[1], None)
-            if arg2 == None:
+            arg1 = label_name.get(temp_instruction[1], None)
+            if arg1 == None:
                 raise ValueError(f"Label {temp_instruction[1]} not found.")
         elif opcode in ('JNZ', 'JAL'):
             # expect label in arg2

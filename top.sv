@@ -321,8 +321,6 @@ module top(
     end
 
     ALU alu_inst (
-        .clk(clk_1Hz),
-        .rst_n,
         .data1(ALU_Data1),
         .data2(ALU_Data2),
         .mode(ALU_mode),

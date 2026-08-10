@@ -25,31 +25,40 @@ opcode_map: dict[int, str] = {
     21: "HALT"
 }
 
-type DataType = Literal["REG", "IMM", "BRAM", "LABEL"]
+type DataType = Literal["RD", "RS1", "RS2", "IMM", "BRAM", "LABEL"]
 
 INSTRUCTION_FORMATS: dict[str, list[tuple[DataType, int]]] = {
     "NOP":      [],                                         # 0 args
-    "ADD":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
-    "SUB":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
-    "MUL":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
-    "DIV":      [("REG", 3), ("REG", 3), ("REG", 3)],       # [3 bit reg, 3 bit reg, 3 bit reg]
-    "ADDI":     [("REG", 3), ("REG", 3), ("IMM", 16)],      # [3 bit reg, 3 bit reg, 16 bit literal]
-    "SUBI":     [("REG", 3), ("REG", 3), ("IMM", 16)],      # [3 bit reg, 3 bit reg, 16 bit literal]
-    "MOV":      [("REG", 3), ("REG", 3)],                   # [3 bit reg, 3 bit reg]
-    "LOAD":     [("REG", 3), ("BRAM", 16)],                 # [3 bit reg, 16 bit BRAM]
-    "LOADI":    [("REG", 3), ("IMM", 16)],                  # [3 bit reg, 16 bit literal]
-    "LOADR":    [("REG", 3), ("REG", 3)],                   # [3 bit reg, 3 bit reg]
-    "STORE":    [("REG", 3), ("BRAM", 16)],                 # [3 bit reg, 16 bit BRAM]
-    "STORER":   [("REG", 3), ("REG", 3)],                   # [3 bit reg, 3 bit reg]
-    "JMP":      [("REG", 3), ("LABEL", 16)],                # [3 bit padding, 16 bit label]
-    "JNZ":      [("REG", 3), ("LABEL", 16)],                # [3 bit reg, 16 bit label]
-    "JAL":      [("REG", 3), ("LABEL", 16)],                # [3 bit reg, 16 bit literal]
-    "JMPR":     [("REG", 3)],                               # [3 bit reg]
-    "BEQ":      [("REG", 3), ("REG", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
-    "BNE":      [("REG", 3), ("REG", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
-    "BLT":      [("REG", 3), ("REG", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
-    "BGE":      [("REG", 3), ("REG", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
+    "ADD":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [3 bit reg, 3 bit reg, 3 bit reg]
+    "SUB":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [3 bit reg, 3 bit reg, 3 bit reg]
+    "MUL":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [3 bit reg, 3 bit reg, 3 bit reg]
+    "DIV":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [3 bit reg, 3 bit reg, 3 bit reg]
+    "ADDI":     [("RD", 3), ("RS1", 3), ("IMM", 16)],       # [3 bit reg, 3 bit reg, 16 bit literal]
+    "SUBI":     [("RD", 3), ("RS1", 3), ("IMM", 16)],       # [3 bit reg, 3 bit reg, 16 bit literal]
+    "MOV":      [("RD", 3), ("RS1", 3)],                    # [3 bit reg, 3 bit reg]
+    "LOAD":     [("RD", 3), ("BRAM", 16)],                  # [3 bit reg, 16 bit BRAM]
+    "LOADI":    [("RD", 3), ("IMM", 16)],                   # [3 bit reg, 16 bit literal]
+    "LOADR":    [("RD", 3), ("RS1", 3)],                    # [3 bit reg, 3 bit reg]
+    "STORE":    [("RS1", 3), ("BRAM", 16)],                 # [3 bit reg, 16 bit BRAM]
+    "STORER":   [("RS1", 3), ("RS2", 3)],                   # [3 bit reg, 3 bit reg]
+    "JMP":      [("LABEL", 16)],                            #[16 bit label]
+    "JNZ":      [("RS1", 3), ("LABEL", 16)],                # [3 bit reg, 16 bit label]
+    "JAL":      [("RD", 3), ("LABEL", 16)],                 # [3 bit reg, 16 bit literal]
+    "JMPR":     [("RS1", 3)],                               # [3 bit reg]
+    "BEQ":      [("RS1", 3), ("RS2", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
+    "BNE":      [("RS1", 3), ("RS2", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
+    "BLT":      [("RS1", 3), ("RS2", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
+    "BGE":      [("RS1", 3), ("RS2", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
     "HALT":     [],                                         # 0 args
+}
+
+SLOT_OFFSET: dict[DataType, int] = {
+    "RD": 24,
+    "RS1": 21,
+    "RS2": 18,
+    "IMM": 2,
+    "LABEL": 2,
+    "BRAM": 2
 }
 
 def decode(word: str) -> tuple[None | str, list[int]]:
@@ -58,20 +67,25 @@ def decode(word: str) -> tuple[None | str, list[int]]:
         return None, []
     opcode = opcode_map[opcode_val]
     
-    format = INSTRUCTION_FORMATS[opcode]
-    last_index = 5
+    formats = INSTRUCTION_FORMATS[opcode]
     operands: list[int] = []
-    for data in format:
-        width = data[1]
-        val = int(word[last_index:last_index + width], base=2)
-        last_index += width
+
+    if len(args) != len(formats):
+        raise ValueError(f"{opcode} takes {len(formats)} operands, got {len(args)}")
+
+    for field_type, width in formats:
+        bit_offset = SLOT_OFFSET[field_type]
+        start_idx = 32 - (bit_offset + width)
+        end_idx = 32 - bit_offset
+
+        val = int(word[start_idx:end_idx], 2)
         operands.append(val)
     return opcode, operands
 
 def disasm(opcode: str | None, operands: list[int]):
     if opcode is None:
         return "??? undecodable"
-    parts = []
+    parts: list[str] = []
     for (kind, _w), val in zip(INSTRUCTION_FORMATS[opcode], operands):
 
         match kind:
@@ -86,15 +100,15 @@ def disasm(opcode: str | None, operands: list[int]):
 
     return f"{opcode:<7}{' '.join(parts)}"
 
-def target_of(opcode: str, operands: list[int]):
+def target_of(opcode: str | None, operands: list[int]):
     if opcode in ("BEQ", "BNE", "BLT", "BGE"):
         return operands[2]
     if opcode in ("JMP", "JNZ", "JAL"):
         return operands[1]
     return None
 
-def check(program):
-    problems = []
+def check(program: list[tuple[str | None, list[int]]]):
+    problems: list[tuple[int, str, str]] = []
     for pc, (opcode, operands) in enumerate(program):
         if opcode is None:
             problems.append((pc, "Error", "Undecodeable instruction"))
@@ -107,7 +121,7 @@ def check(program):
         elif target == pc + 1:
             problems.append((pc, "Error", f"Jump to {target}, which is the next instruction (pc + 1). Both path leads to the same place, so the branch can never run."))
 
-    seen = set()
+    seen:set[int] = set()
     stack = [0]
     while stack:
         pc = stack.pop()
@@ -287,7 +301,7 @@ while True:
             
         case "HALT":
             break
-    changed = []
+    changed: list[str] = []
     for i in range(8):
         if reg[i] != before[i]:
             changed.append(f"R{i}:{before[i]}->{reg[i]}")

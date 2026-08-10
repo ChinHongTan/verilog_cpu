@@ -21,41 +21,128 @@ module pipeline(
 
     // Registers
 	RegData regData1, regData2;                 // data fetched from register
-    RegData ALU_Data1, ALU_Data2, result;       // data feed into ALU; output from ALU
-    RegData data_in;                            // used to send data into register
-    RegAddr address_write, address1, address2;  // NEVER be number [3 bit]
+    RegData result;                             // data feed into ALU; output from ALU
+    RegAddr address1, address2;                 // NEVER be number [3 bit]
+
+    RegData [3:1] data_in;                      // used to send data into register
+    RegAddr [3:1] address_write;
+    RW [3:1] write_enable; 
 
     // IR (ROM)
     RAM_Address pc;                             // address of next instruction
-    RAM_Data command;                           // fetched from BRAM
+    RAM_Data command;                           // instruction register fetched from BRAM
     assign led[7:0] = pc;
 
     // RAM (data)
-    RAM_Address RAM_addr;
-    RAM_Data RAM_in, RAM_out;
+    RAM_Address [2:1] RAM_addr;
+    RAM_Data [2:1] RAM_in, RAM_out;
+    RW [2:1] RAM_write_enable;
+    
 
     bool update_seg;
 
     RAM_Address out;
 
-    logic [31:0] current_ir;                                        // instruction register
     fetch fetch_inst(
         .clk,
-        .rst_n,
         .pc,
-        .ir(current_ir)
+        .ir(command)
     );
-    wire [4:0] opcode = current_ir[31:24];
+    wire [4:0] opcode = command[31:27];
+    wire [`REG_ADDR - 1:0] adrA = command[26:24];                // first reg
+    wire [`REG_ADDR - 1:0] adrB = command[23:21];                // second reg
+    wire [`REG_ADDR - 1:0] adrC = command[20:18];                // third reg
 
-    decode decode_inst(
-        .clk,
-        .rst_n,
-        .address_write,
-        .address1,
-        .address2,
-        .regData1,
-        .regData2
-    );
+    wire [`REG_WIDTH - 1:0] imm = command[23:8];
+    wire [`REG_WIDTH - 1:0] branch_imm = command[20:5];
+    wire [`ADDR_WIDTH - 1:0] imm_max = overflow_16to8b(imm);
+    
+    // for imm
+    RegData Data1, Data2; // sometimes Data2 is imm, sometimes regData2
+    always_comb begin : Decode
+        address_write[1] = 3'b0;
+        address1      = 3'b0;
+        address2      = 3'b0;
+        Data1 = 0;
+        Data2 = 0;
+
+        case (opcode)
+            OP_ADD, OP_SUB, OP_MUL, OP_DIV: begin : ALU_Operation
+                Data1 = 0;
+                Data2 = 0;
+                address_write[1] = adrA;
+                address1      = adrB;
+                address2      = adrC;
+            end
+
+            OP_ADDI, OP_SUBI: begin
+                Data1 = regData1;
+                Data2 = imm;
+                address_write[1] = adrA;
+                address1      = adrB;
+            end
+
+            OP_MOV: begin
+                address_write[1] = adrA;
+                address1      = adrB;
+            end
+
+            OP_LOAD: begin
+                address_write[1] = adrA;
+            end
+
+            OP_LOADI: begin
+                address_write[1] = adrA;
+            end
+
+            OP_LOADR: begin // LOADR R0 R1 ; R0 = BRAM[R1]
+                address_write[1] = adrA;
+                address1    = adrB;
+            end
+
+            OP_STORE: begin
+                Data1 = regData1;
+                Data2 = imm;
+                address1 = adrA;
+            end
+
+            OP_STORER: begin 
+                address1 = adrA;
+                address2 = adrB;
+            end
+
+            OP_JMP: begin
+                
+            end
+
+            OP_JNZ: begin
+                address1 = adrA;
+            end
+
+            OP_JAL: begin
+                address_write[1] = adrA;
+            end
+
+            OP_JMPR: begin
+                address1 = adrA;
+            end
+
+            OP_BEQ, OP_BNE, OP_BLT, OP_BGE: begin
+                address1 = adrA;
+                address2 = adrB;
+            end
+
+            OP_HALT: begin
+
+            end
+            
+            default: begin
+
+            end
+
+        endcase
+    end
+
     Registers reg_inst(
         .clk,
         .rst_n,
@@ -65,11 +152,11 @@ module pipeline(
         .data_out2(regData2),
 
         .write(write_enable[3]),
-        .address_write,
-        .data_in
+        .address_write(address_write[3]),
+        .data_in(data_in[3])
     );
 
-    RegData Data1, Data2; // sometimes Data2 is imm, sometimes regData2
+    
     execute execute_inst(
         .clk,
         .rst_n,
@@ -80,18 +167,29 @@ module pipeline(
     );
 
     // Data
-    BRAM RAM(
+    memory RAM( // 2 stages delay
         .clk(clk_1Hz),
-        .write(RAM_write_enable[2]), 
-        .address(RAM_addr),
-        .in(RAM_in),
-        .out(RAM_out)
+        .RAM_write_enable(RAM_write_enable[2]), 
+        .RAM_addr(RAM_addr[2]),
+        .RAM_in(RAM_in[2]),
+        .RAM_out(RAM_out[2]),
+        .updated()
     );
 
-    RW [2:1] RAM_write_enable;
-    RW [3:1] write_enable; 
+    logic Z, N, C, V;
+    ALU alu_inst (
+        .data1(regData1),
+        .data2(regData2),
+        .mode(ALU_mode),
+        .result,
+        .Z, .N, .C, .V // Z = zero, N = negative, C = carry, V = overflow
+    );
 
-    wire [`REG_WIDTH - 1:0] imm = current_ir[23:8];
+    // flags for Unsigned
+    wire equ = Z;
+    wire less = N ^ V;
+    wire greater_or_equal = ~less;
+
     always_ff @(posedge clk, negedge rst_n) begin : CU //TODO
         if (!rst_n) begin
             RAM_write_enable[2:1] <= 2'b0;
@@ -101,35 +199,32 @@ module pipeline(
             RAM_write_enable <= (RAM_write_enable << 1);
             write_enable <= (write_enable << 1);
 
-            case (opcode)
-                OP_ADD, OP_SUB, OP_MUL, OP_DIV: begin : ALU_Operation
-                    Data1 <= regData1;
-                    Data2 <= regData2;
+            address_write[3:2] <= address_write[2:1];
+            data_in[3:2] <= data_in[2:1];
+
+            RAM_addr[2] <= RAM_addr[1];
+            RAM_in[2] <= RAM_in[1];
+
+            case (opcode) // execute stage
+                OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_ADDI, OP_SUBI: begin
                     write_enable[3:2] <= write_enable[2:1];
                     write_enable[1] <= WRITE;
-                end
-                OP_ADDI, OP_SUBI: begin
-                    Data1 <= regData1;
-                    Data2 <= imm;
-                    write_enable[3:2] <= write_enable[2:1];
-                    write_enable[1] <= WRITE;
+                    data_in[1] <= result;
                 end
                 OP_MOV: begin
-                    Data1 <= 0;
-                    Data2 <= 0;
-                    
+                    write_enable[3:2] <= write_enable[2:1];
+                    write_enable[1] <= WRITE;
+                    data_in[1] <= regData1;
                 end
 
+                // Memory
                 OP_LOAD: begin
-                    Data1 <= 0;
-                    Data2 <= 0;
                     write_enable[3:2] <= write_enable[2:1];
                     write_enable[1] <= WRITE;
                 end
 
                 OP_LOADI: begin
-                    Data1 <= 0;
-                    Data2 <= 0;
+                    
                     write_enable[3:2] <= write_enable[2:1];
                     write_enable[1] <= WRITE;
                 end
@@ -140,8 +235,6 @@ module pipeline(
                 end
 
                 OP_STORE: begin
-                    Data1 <= regData1;
-                    Data2 <= imm;
                     RAM_write_enable[2] <= RAM_write_enable[1];
                     RAM_write_enable[1] <= WRITE;
                 end
@@ -151,22 +244,33 @@ module pipeline(
                     RAM_write_enable[1] <= WRITE;
                 end
 
+                // Jump and Branch
                 OP_JMP: begin
-                    
+                    pc <= imm_max;
                 end
                 OP_JNZ: begin
-                    
+                    if (regData1 != 0) pc <= imm_max;
                 end
                 OP_JAL: begin
+                    pc <= overflow_16to8b(imm);
                     write_enable[3:2] <= write_enable[2:1];
                     write_enable[1] <= WRITE;
                 end
                 OP_JMPR: begin
-                    
+                    pc <= overflow_16to8b(regData1);
                 end
 
-                OP_BEQ, OP_BNE, OP_BLT, OP_BGE: begin
-                    
+                OP_BEQ: begin
+                    if (equ) pc <= overflow_16to8b(branch_imm);
+                end
+                OP_BNE: begin
+                    if (~equ) pc <= overflow_16to8b(branch_imm);
+                end 
+                OP_BLT: begin
+                    if (less) pc <= overflow_16to8b(branch_imm);
+                end 
+                OP_BGE: begin
+                    if (greater_or_equal) pc <= overflow_16to8b(branch_imm);
                 end
                 
                 OP_HALT: begin
@@ -210,7 +314,6 @@ endmodule
 
 module fetch (
     input logic clk,
-    input logic rst_n,
     input RAM_Address pc,
 
     output logic [31:0] ir
@@ -224,14 +327,14 @@ module fetch (
     );
 endmodule
 
-module decode(
-    input logic clk,
-    input logic rst_n,
-    input RegAddr address_write, address1, address2,
-    output RegData regData1, regData2
-);
+//module decode(
+//    input logic clk,
+//    input logic rst_n,
+//    input RegAddr address_write, address1, address2,
+//    output RegData regData1, regData2
+//);
     
-endmodule
+//endmodule
 
 module execute(
     input logic clk,
@@ -241,19 +344,9 @@ module execute(
     output RAM_Address out,
     output bool update_seg
 );
-    RegData ALU_Data1, ALU_Data2, result;       // data feed into ALU; output from ALU
     ALU_Pkg::ALU_Mode ALU_mode;
 
     operation_t opcode;
-    bool ALU_op;
-    ALU alu_inst (
-        .clk(clk),
-        .rst_n,
-        .data1(ALU_Data1),
-        .data2(ALU_Data2),
-        .mode(ALU_mode),
-        .result
-    );
 
     wire [`ADDR_WIDTH - 1:0] imm_max = overflow_16to8b(Data2);    // saturate to 0xFF  // imm
     always_ff @(posedge clk, negedge rst_n) begin : Main_FSM    // MARK: MAIN
@@ -261,14 +354,12 @@ module execute(
             
         end else begin case (opcode)
             OP_ADD, OP_SUB, OP_MUL, OP_DIV: begin : ALU_Operation
-                ALU_Data1 <= Data1;
-                ALU_Data2 <= Data2;
-                ALU_op <= true;
+                //ALU_Data1 <= Data1;
+                //ALU_Data2 <= Data2;
             end
             OP_ADDI, OP_SUBI: begin
-                ALU_Data1 <= Data1;
-                ALU_Data2 <= Data2; // imm
-                ALU_op <= true;
+                //ALU_Data1 <= Data1;
+                //ALU_Data2 <= Data2; // imm
             end
             OP_MOV: begin
                 
@@ -334,11 +425,23 @@ endmodule
 
 module memory(
     input logic clk,
+    input logic rst_n,
     input RAM_Address RAM_addr,
     input RAM_Data RAM_in,
     input RW RAM_write_enable,
-    output RAM_Data RAM_out
+    output RAM_Data RAM_out,
+    output bool updated
 );
+    RAM_Address RAM_addr_prev;
+    always_ff @(posedge clk, negedge rst_n) begin
+        updated <= true;
+        if (!rst_n) begin 
+            RAM_addr_prev <= 0;
+        end else if (RAM_write_enable == READ && RAM_addr_prev != RAM_addr) begin
+            updated <= false;
+            RAM_addr_prev <= RAM_addr;
+        end
+    end
     // Data
     BRAM RAM(
         .clk,

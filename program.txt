@@ -8,42 +8,42 @@
 ;     if is_prime:
 ;         print(f"======{i} is a prime.=====")
 
-LOADI R0 2 ; Start from 2 (i)
-LOADI R1 100 ; Ends at 100
+LOADI R0 2                          ; Start from 2 (i)
+LOADI R1 100                        ; Ends at 100
 
 START:
-    LOADI R2 1 ; is_prime = true
+    LOADI R2 1                      ; is_prime = true
 
     ; for j in range(2, i // 2)
-    LOADI R3 2 ; Save the divider here
+    LOADI R3 2                      ; Save the divider here
     ; Save i // 2 in variable first
-    DIV R4 R0 R3 ; i // 2
-    LOADI R5 2 ; Start inner pointer from 2 (j)
+    DIV R4 R0 R3                    ; i // 2
+    LOADI R5 2                      ; Start inner pointer from 2 (j)
 
-    BLT R4 R5 AFTER_INNER ; check if j < i
+    BLT R4 R5 AFTER_INNER           ; check if j < i
 
 INNER:
-    DIV R6 R0 R5 ; result
-    MUL R7 R6 R5 ; result * j
-    BNE R7 R0 NOT_DIVISIBLE ; jump out if result * j is not equal to i
-    LOADI R2 0 ; is_prime = false
+    DIV R6 R0 R5                    ; result
+    MUL R7 R6 R5                    ; result * j
+    BNE R7 R0 NOT_DIVISIBLE         ; jump out if result * j is not equal to i
+    LOADI R2 0                      ; is_prime = false
     JMP AFTER_INNER
 
 NOT_DIVISIBLE:
-    ADDI R5 R5 1 ; increment j
-    BLT R5 R4 INNER ; jump back if not reach R4 (i // 2)
+    ADDI R5 R5 1                    ; increment j
+    BLT R5 R4 INNER                 ; jump back if not reach R4 (i // 2)
 
 AFTER_INNER:
-    LOADI R3 1 ; save constant here since R3 is not used anymore
-    BEQ R2 R3 IS_PRIME; If this is a prime
+    LOADI R3 1                      ; save constant here since R3 is not used anymore
+    BEQ R2 R3 IS_PRIME              ; If this is a prime
     JMP AFTER_IS_PRIME
 
 IS_PRIME:
-    STORE R0 65500 ; print the prime
+    STORE R0 65500                  ; print the prime
     JMP AFTER_IS_PRIME
 
 AFTER_IS_PRIME:
-    ADDI R0 R0 1 ; increment i
-    BLT R0 R1 START ; Jump back if not reach 10
+    ADDI R0 R0 1                    ; increment i
+    BLT R0 R1 START                 ; Jump back if not reach 10
 
 HALT
