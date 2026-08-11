@@ -56,7 +56,7 @@ module top(
     // ROM
     BRAM Instruction(
         .clk(clk_1Hz),
-        .write(1'b0),   // 0:read 1:write
+        .write(READ),   // 0:read 1:write
         .address(pc),   // address
         .in(32'b0),     // value to store
         .out(command)   // value to read
@@ -72,6 +72,7 @@ module top(
     );
 
     FSM_State_Pkg::state_t state;
+    operation_t opcode;
     control_unit CU(
         .clk(clk_1Hz),
         .rst_n,
@@ -94,7 +95,7 @@ module top(
     );
 
     ALU_Pkg::ALU_state_t ALU_state;                                 // 1 cycle delay
-    operation_t opcode;
+    
     logic ALU_op;
     stage_t stage;                                                  // delay for RAM updating
 

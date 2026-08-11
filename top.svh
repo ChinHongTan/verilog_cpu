@@ -75,4 +75,13 @@
     endfunction
 
 	`define isSigned 0
+
+	typedef enum logic [2:0] {
+        NONE		= 3'd0,
+        CALC        = 3'd1,
+        MOV         = 3'd2,
+        STORE       = 3'd3,
+		STORER      = 3'd4,
+		HALT        = 3'd5
+	} execute_mode_t;
 `endif
