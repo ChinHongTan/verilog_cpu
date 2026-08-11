@@ -2,7 +2,7 @@
 
 module BRAM_tb;
 	logic clk;
-	logic write;
+	RW write;
 	logic [7:0] address;
 
 	RAM_Data in, out;

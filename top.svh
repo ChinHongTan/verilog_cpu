@@ -82,6 +82,7 @@
         MOV         = 3'd2,
         STORE       = 3'd3,
 		STORER      = 3'd4,
-		HALT        = 3'd5
+		JUMP		= 3'd5,
+		HALT        = 3'd7
 	} execute_mode_t;
 `endif

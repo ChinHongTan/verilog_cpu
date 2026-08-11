@@ -19,7 +19,7 @@ module CPU_tb;
 
     initial begin
         $dumpfile("wave.vcd"); 
-        $dumpvars(1, tb_top);   
+        $dumpvars(1, CPU_tb);   
         clk = 1'b1;
         sw = 16'b1;
 

@@ -121,11 +121,11 @@ module pipeline(
 
     // MARK: Decode stage
     logic jump_condition;
-    RegData Data1, Data2;
+    RegData Data1_o, Data2_o;
     execute_mode_t execute_mode;
     always_comb begin : decode_control
-        Data1 = 0;
-        Data2 = 0;
+        Data1_o = 0;
+        Data2_o = 0;
         jump_condition = false;
         write_enable[0] = READ;
         RAM_write_enable[0] = READ;
@@ -133,21 +133,21 @@ module pipeline(
         load[0] = false;
         case (opcode) // execute stage
             OP_ADD, OP_SUB, OP_MUL, OP_DIV: begin
-                Data1 = regData1;
-                Data2 = regData2;
+                Data1_o = regData1;
+                Data2_o = regData2;
                 write_enable[0] = WRITE;
                 execute_mode = CALC;
             end
             OP_ADDI, OP_SUBI: begin
-                Data1 = regData1;
-                Data2 = imm;
+                Data1_o = regData1;
+                Data2_o = imm;
                 write_enable[0] = WRITE;
                 execute_mode = CALC;
             end
 
             OP_STORE: begin
-                Data1 = regData1;
-                Data2 = imm;
+                Data1_o = regData1;
+                Data2_o = imm;
                 RAM_write_enable[0] = WRITE;
                 execute_mode = STORE;
             end
@@ -179,37 +179,37 @@ module pipeline(
 
             // Jump and Branch
             OP_JMP: begin
-                Data1 = imm;
+                Data1_o = imm;
                 jump_condition = true;
             end
             OP_JNZ: begin
-                Data1 = imm;
+                Data1_o = imm;
                 jump_condition = (regData1 != 0);
             end
             OP_JAL: begin
-                Data1 = imm;
+                Data1_o = imm;
                 jump_condition = true;
                 write_enable[0] = WRITE;
             end
             OP_JMPR: begin
-                Data1 = regData1;
+                Data1_o = regData1;
                 jump_condition = true;
             end
 
             OP_BEQ: begin
-                Data1 = imm;
+                Data1_o = imm;
                 jump_condition = equ;
             end
             OP_BNE: begin
-                Data1 = imm;
+                Data1_o = imm;
                 jump_condition = ~equ;
             end 
             OP_BLT: begin
-                Data1 = imm;
+                Data1_o = imm;
                 jump_condition = less;
             end 
             OP_BGE: begin
-                Data1 = imm;
+                Data1_o = imm;
                 jump_condition = greater_or_equal;
             end
             default: begin
@@ -217,8 +217,23 @@ module pipeline(
         endcase
     end
 
+    RegData Data1, Data2;
+    always_comb begin : forwarding_multiplexer
+        case (address1)
+            address_write[1]: begin Data1 = data_in[1]; end // execute stage
+            address_write[2]: begin Data1 = data_in[2]; end // write back stage
+            default:          begin Data1 = Data1_o;    end
+        endcase
+
+        case (address2)
+            address_write[1]: begin Data2 = data_in[1]; end
+            address_write[2]: begin Data2 = data_in[2]; end
+            default:          begin Data2 = Data2_o;    end
+        endcase
+    end
+
     
-    logic [1:0] after_jump;
+    logic [1:0] after_jump_lock;
     // MARK: Execute stage
     always_ff @(posedge clk, negedge rst_n) begin : Execute_Stage
         if (!rst_n) begin
@@ -235,7 +250,6 @@ module pipeline(
             // signals for REG
             data_in[1] <= 0;
             address_write[1] <= 0;
-
         end else if (!pause) begin : Decode_to_Execute
             pc <= pc + 1;
 
@@ -246,13 +260,28 @@ module pipeline(
             // signals for RAM
             RAM_addr <= 0;
             RAM_in <= 0;
+            load[1] <= load[0];
 
             // signals for REG
             data_in[1] <= 0;
             address_write[1] <= address_write[0];
 
-            load[1] <= load[0];
-            case (execute_mode) // execute stage
+            if (after_jump_lock != 2'b00) begin : solve_control_hazard
+                if (after_jump_lock == 2'b1) begin
+                    pc <= pc; // don't jump
+                end
+                after_jump_lock <= after_jump_lock + 1;
+
+                // block the signals
+                RAM_write_enable[1] <= READ;
+                write_enable[1] <= READ;
+
+                RAM_addr <= 0;
+                RAM_in <= 0;
+
+                data_in[1] <= 0;
+                address_write[1] <= 0;
+            end else case (execute_mode) // execute stage
                 CALC: begin
                     data_in[1] <= result;
                 end
@@ -278,15 +307,17 @@ module pipeline(
                     halt <= true;
                 end
 
-                NONE: begin
+                JUMP: begin
                     if (jump_condition) begin
                         pc <= overflow_16to8b(Data1); // imm or RegData1
+                        after_jump_lock <= 2'b01;
                         //TODO change next ir to nop
                     end
                 end
                 default: begin
                     if (jump_condition) begin
                         pc <= overflow_16to8b(Data1); // imm or RegData1
+                        after_jump_lock <= 2'b01;
                     end
                 end
             endcase
@@ -362,6 +393,7 @@ module memory(
     input logic rst_n,
     input RAM_Address RAM_addr,
     input RAM_Data RAM_in,
+    output RAM_Data RAM_out,
     input RW RAM_write_enable,
     output bool updated,
 
@@ -376,8 +408,6 @@ module memory(
     input bool load, // Whether the data_in is from mem (LOAD/LOADR)
     input bool pause
 );
-    RAM_Data RAM_out;
-
     RAM_Address RAM_addr_prev;
     always_ff @(posedge clk, negedge rst_n) begin
         if (!rst_n) begin 
