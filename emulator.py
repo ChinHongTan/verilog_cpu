@@ -70,9 +70,6 @@ def decode(word: str) -> tuple[None | str, list[int]]:
     formats = INSTRUCTION_FORMATS[opcode]
     operands: list[int] = []
 
-    if len(args) != len(formats):
-        raise ValueError(f"{opcode} takes {len(formats)} operands, got {len(args)}")
-
     for field_type, width in formats:
         bit_offset = SLOT_OFFSET[field_type]
         start_idx = 32 - (bit_offset + width)
@@ -80,6 +77,9 @@ def decode(word: str) -> tuple[None | str, list[int]]:
 
         val = int(word[start_idx:end_idx], 2)
         operands.append(val)
+    
+    if len(operands) != len(formats):
+            raise ValueError(f"{opcode} takes {len(formats)} operands, got {len(operands)}")
     return opcode, operands
 
 def disasm(opcode: str | None, operands: list[int]):
@@ -103,8 +103,10 @@ def disasm(opcode: str | None, operands: list[int]):
 def target_of(opcode: str | None, operands: list[int]):
     if opcode in ("BEQ", "BNE", "BLT", "BGE"):
         return operands[2]
-    if opcode in ("JMP", "JNZ", "JAL"):
+    if opcode in ("JNZ", "JAL"):
         return operands[1]
+    if opcode == "JMP":
+        return operands[0]
     return None
 
 def check(program: list[tuple[str | None, list[int]]]):
@@ -135,7 +137,7 @@ def check(program: list[tuple[str | None, list[int]]]):
             problems.append((pc, "Info", f"Indirect jump target unresolveable. Skipping."))
             continue
         elif opcode == "JMP":
-            stack.append(operands[1])
+            stack.append(operands[0])
             continue # unconditional jump, only check the jump dest
         target = target_of(opcode, operands)
         if target is not None:
@@ -265,7 +267,7 @@ while True:
             Bram[args[1]] = reg[args[0]]
             
         case "JMP":
-            pc = args[1]
+            pc = args[0]
             
         case "JNZ":
             note = f"  [R{args[0]}={reg[args[0]]} -> {'taken' if reg[args[0]] != 0 else 'fall through'}]"

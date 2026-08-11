@@ -47,26 +47,26 @@ type DataType = Literal["RD", "RS1", "RS2", "IMM", "BRAM", "LABEL"]
 
 INSTRUCTION_FORMATS: dict[str, list[tuple[DataType, int]]] = {
     "NOP":      [],                                         # 0 args
-    "ADD":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [3 bit reg, 3 bit reg, 3 bit reg]
-    "SUB":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [3 bit reg, 3 bit reg, 3 bit reg]
-    "MUL":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [3 bit reg, 3 bit reg, 3 bit reg]
-    "DIV":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [3 bit reg, 3 bit reg, 3 bit reg]
-    "ADDI":     [("RD", 3), ("RS1", 3), ("IMM", 16)],       # [3 bit reg, 3 bit reg, 16 bit literal]
-    "SUBI":     [("RD", 3), ("RS1", 3), ("IMM", 16)],       # [3 bit reg, 3 bit reg, 16 bit literal]
-    "MOV":      [("RD", 3), ("RS1", 3)],                    # [3 bit reg, 3 bit reg]
-    "LOAD":     [("RD", 3), ("BRAM", 16)],                  # [3 bit reg, 16 bit BRAM]
-    "LOADI":    [("RD", 3), ("IMM", 16)],                   # [3 bit reg, 16 bit literal]
-    "LOADR":    [("RD", 3), ("RS1", 3)],                    # [3 bit reg, 3 bit reg]
-    "STORE":    [("RS1", 3), ("BRAM", 16)],                 # [3 bit reg, 16 bit BRAM]
-    "STORER":   [("RS1", 3), ("RS2", 3)],                   # [3 bit reg, 3 bit reg]
-    "JMP":      [("LABEL", 16)],                            #[16 bit label]
-    "JNZ":      [("RS1", 3), ("LABEL", 16)],                # [3 bit reg, 16 bit label]
-    "JAL":      [("RD", 3), ("LABEL", 16)],                 # [3 bit reg, 16 bit literal]
-    "JMPR":     [("RS1", 3)],                               # [3 bit reg]
-    "BEQ":      [("RS1", 3), ("RS2", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
-    "BNE":      [("RS1", 3), ("RS2", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
-    "BLT":      [("RS1", 3), ("RS2", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
-    "BGE":      [("RS1", 3), ("RS2", 3), ("LABEL", 16)],    # [3 bit reg, 3 bit reg, 16 bit label]
+    "ADD":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [ADD rd rs1 rs2]
+    "SUB":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [SUB rd rs1 rs2]
+    "MUL":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [MUL rd rs1 rs2]
+    "DIV":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [DIV rd rs1 rs2]
+    "ADDI":     [("RD", 3), ("RS1", 3), ("IMM", 16)],       # [ADDI rd rs1 imm]
+    "SUBI":     [("RD", 3), ("RS1", 3), ("IMM", 16)],       # [SUBI rd rs1 imm]
+    "MOV":      [("RD", 3), ("RS1", 3)],                    # [MOV rd rs1]
+    "LOAD":     [("RD", 3), ("BRAM", 16)],                  # [LOAD rd bram]
+    "LOADI":    [("RD", 3), ("IMM", 16)],                   # [LOADI rd imm]
+    "LOADR":    [("RD", 3), ("RS1", 3)],                    # [LOADR rd rs1]
+    "STORE":    [("RS1", 3), ("BRAM", 16)],                 # [STORE rs1 bram]
+    "STORER":   [("RS1", 3), ("RS2", 3)],                   # [STORER rs1 rs2]
+    "JMP":      [("LABEL", 16)],                            # [JMP label]
+    "JNZ":      [("RS1", 3), ("LABEL", 16)],                # [JNZ rs1 label]
+    "JAL":      [("RD", 3), ("LABEL", 16)],                 # [JAL rd label]
+    "JMPR":     [("RS1", 3)],                               # [JMPR rs1]
+    "BEQ":      [("RS1", 3), ("RS2", 3), ("LABEL", 16)],    # [BEQ rs1 rs2 label]
+    "BNE":      [("RS1", 3), ("RS2", 3), ("LABEL", 16)],    # [BNE rs1 rs2 label]
+    "BLT":      [("RS1", 3), ("RS2", 3), ("LABEL", 16)],    # [BLT rs1 rs2 label]
+    "BGE":      [("RS1", 3), ("RS2", 3), ("LABEL", 16)],    # [BGE rs1 rs2 label]
     "HALT":     [],                                         # 0 args
 }
 
@@ -97,7 +97,7 @@ def encode(code: str, arg1: int | str | None = None, arg2: int | str | None = No
         parsed_val = parse_operand(arg_val, format_spec)
         
         offset = SLOT_OFFSET[field_type]
-        instruction_val |= (parsed_val << offset)
+        instruction_val |= (parsed_val << offset) # bitwise OR to combine all val
 
     bit_stream = f"{instruction_val:032b}"
     compiled_instruction.append(bit_stream)
@@ -120,7 +120,6 @@ def parse_operand(arg: int | str, data: tuple[DataType, int]) -> int:
             num = int(arg)
         except ValueError as e:
             raise ValueError(f"Invalid immediate value '{arg}'") from e
-
 
     if not (0 <= num <= (1 << width) - 1): # (2 ** width) - 1 
         raise ValueError(f"Immediate value {num} out of range.")
