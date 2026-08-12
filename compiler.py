@@ -80,17 +80,14 @@ SLOT_OFFSET: dict[DataType, int] = {
 }
 
 compiled_instruction: list[str] = []
+filename = "program.txt"
+line_count = 0
 
-def encode(code: str, arg1: int | str | None = None, arg2: int | str | None = None, arg3: int | str | None = None) -> None:
-    print(code, arg1, arg2, arg3)
+def encode(code: str, args: list[str | int]) -> None:
+    print(code, args)
     instruction_val = Opcode[code] << 27
 
     formats = INSTRUCTION_FORMATS[code]
-    args: list[int | str] = []
-    for a in (arg1, arg2, arg3):
-        if a is not None:
-            args.append(a)
-
     
     for arg_val, format_spec in zip(args, formats):
         field_type = format_spec[0]
@@ -125,11 +122,26 @@ def parse_operand(arg: int | str, data: tuple[DataType, int]) -> int:
         raise ValueError(f"Immediate value {num} out of range.")
     return num
 
-with open("program.txt", "r", encoding="utf-8") as f:
+def make_reporter(filename, line_num, line_text):
+    def fail(msg, token=""):
+        col = line_text.find(token) if token else 0
+        caret = "^" * len(token)
+        raise SyntaxError(
+            f"\nAssembly Error in '{filename}', line {line_num}:\n"
+            f"  {line_text}\n"
+            f"  {' ' * max(col, 0)}{caret}\n"
+            f"Error: {msg}"
+        )
+    return fail
+
+with open(filename, "r", encoding="utf-8") as f:
     label_name: dict[str, int] = {}
+    alias: dict[str, str] = {}
+    defines: dict[str, str] = {}
     line_num = 0
-    temp_instructions: list[list[str]] = []
+    temp_instructions: list[tuple[int, list[str]]] = []
     for lines in f:
+        line_count += 1
         clean_line = lines.strip().split(";", 1)[0] # Remove comments
         clean_line = clean_line.strip() # strip again to remove white spaces between comment and code
 
@@ -141,54 +153,54 @@ with open("program.txt", "r", encoding="utf-8") as f:
             continue
 
         parts = re.split(r"[\s,]+", clean_line.strip()) # Accept both ADD R0 R1 and ADD R0, R1
-        temp_instructions.append(parts)
+        if parts[0] == ".alias":
+            alias[parts[1]] = parts[2]
+            continue
+
+        if parts[0] == ".define":
+            defines[parts[1]] = parts[2]
+            continue
+
+        temp_instructions.append((line_count, parts))
         line_num += 1
 
     print("Total instuctions: ", len(temp_instructions))
     print(temp_instructions)
 
-    for temp_instruction in temp_instructions:
-
+    for line_count, temp_instruction in temp_instructions:
         opcode = temp_instruction[0]
-        arg1 = None
-        arg2 = None
-        arg3 = None
+        raw_line_text = " ".join(temp_instruction)
+        args = []
+
+        fail = make_reporter(filename, line_count, raw_line_text)
 
         if len(temp_instruction) - 1 != len(INSTRUCTION_FORMATS[opcode]):
             raise IndexError(f"Argument provided does not match. Needed {len(INSTRUCTION_FORMATS[opcode])}, got {len(temp_instruction) - 1} instead. Instruction: {temp_instruction}")
 
-        if opcode in ('HALT', 'NOP'):
-            pass
-        elif opcode == 'JMP':
-            # expect label in arg1
-            arg1 = label_name.get(temp_instruction[1], None)
-            if arg1 == None:
-                raise ValueError(f"Label {temp_instruction[1]} not found.")
-        elif opcode in ('JNZ', 'JAL'):
-            # expect label in arg2
-            arg1 = temp_instruction[1] # reg addr - 3 bit
-            arg2 = label_name.get(temp_instruction[2], None) # label - 16 bit
-            if arg2 == None:
-                raise ValueError(f"Label {temp_instruction[2]} not found.")
-        elif opcode in ('BEQ', 'BNE', 'BLT', 'BGE'):
-            arg1 = temp_instruction[1]
-            arg2 = temp_instruction[2]
-            arg3 = label_name.get(temp_instruction[3], None) # label
-            if arg3 == None:
-                raise ValueError(f"Label {temp_instruction[3]} not found.")
-        elif opcode in ('ADD', 'SUB', 'MUL', 'DIV', 'ADDI', 'SUBI'): # ALU / Branch, 3 args
-            arg1 = temp_instruction[1]
-            arg2 = temp_instruction[2]
-            arg3 = temp_instruction[3]
-        elif opcode in ('LOADI', 'LOAD', 'STORE', 'MOV', 'LOADR', 'STORER'): # 2 args
-            arg1 = temp_instruction[1]
-            arg2 = temp_instruction[2]
-        elif opcode == 'JMPR':
-            arg1 = temp_instruction[1]
-        else:
-            raise SyntaxError(f"Unknown opcode: {opcode}")
+        for (raw_field, (field_type, width)) in zip(temp_instruction[1:], INSTRUCTION_FORMATS[opcode]):
+            if field_type in ("RD", "RS1", "RS2"):
+                # Reg address
+                field = alias.get(raw_field, raw_field)
+                if field not in Register.__members__:
+                    fail(f"Opcode '{opcode}' expects a Register for {field_type}, but got '{field}'.", field)
+                args.append(field)
 
-        encode(opcode, arg1, arg2, arg3)
+            elif field_type in ("IMM", "BRAM"):
+                field = defines.get(raw_field, raw_field)
+                if field in Register.__members__:
+                    fail(f"Opcode '{opcode}' expects a numeric value for {field_type}, but got Register '{field}'.", field)
+                try:
+                    val = int(field, 0)
+                    args.append(val)
+                except ValueError:
+                    fail(f"Invalid numeric immediate '{field}' for {field_type}.", field)
+
+            elif field_type == "LABEL":
+                if raw_field not in label_name:
+                    fail(f"Label '{raw_field}' used in '{opcode}' is not defined.", raw_field)
+                args.append(label_name[raw_field])
+
+        encode(opcode, args)
 
 print(compiled_instruction)
 
