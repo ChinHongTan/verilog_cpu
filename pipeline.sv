@@ -39,7 +39,7 @@ module pipeline(
     // RAM (data)
     // 1: current out, 2: previous out for reg
     RAM_Address RAM_addr;
-    RAM_Data RAM_in;
+    RAM_Data RAM_in, RAM_out;
     RW [1:0] RAM_write_enable;
     
     bool [1:0] load;
@@ -65,22 +65,6 @@ module pipeline(
     );
     operation_t opcode;
     assign opcode = operation_t'(command[31:27]); // current operation in DECODE
-
-    // MARK: Decode addr
-    always_ff @(posedge clk or negedge rst_n) begin : decode_stage
-        if (!rst_n) begin
-            address_write[0] <= 3'b0;         // first reg
-            address1         <= 3'b0;         // second reg
-            address2         <= 3'b0;         // third reg
-        end else begin
-            address_write[0] <= command[26:24];         // first reg
-            address1         <= command[23:21];         // second reg
-            address2         <= command[20:18];         // third reg
-        end
-    end
-
-    RegData imm;
-    assign imm = command[17:2]; // immediate value
 
     // MARK: ALU
     logic Z, N, C, V;
@@ -118,120 +102,47 @@ module pipeline(
     wire equ = Z;
     wire less = N ^ V;
     wire greater_or_equal = ~less;
+	RegData Data1, Data2;
+	RegData Data1_de, Data2_de;
 
-    // MARK: Decode stage
-    logic jump_condition;
-    RegData Data1_o, Data2_o;
-    execute_mode_t execute_mode;
-    always_comb begin : decode_control
-        Data1_o = 0;
-        Data2_o = 0;
-        jump_condition = false;
-        write_enable[0] = READ;
-        RAM_write_enable[0] = READ;
-        execute_mode = NONE;
-        load[0] = false;
-        case (opcode) // execute stage
-            OP_ADD, OP_SUB, OP_MUL, OP_DIV: begin
-                Data1_o = regData1;
-                Data2_o = regData2;
-                write_enable[0] = WRITE;
-                execute_mode = CALC;
-            end
-            OP_ADDI, OP_SUBI: begin
-                Data1_o = regData1;
-                Data2_o = imm;
-                write_enable[0] = WRITE;
-                execute_mode = CALC;
-            end
+	execute_mode_t execute_mode;
+	logic jump_condition;
+	decode decode_inst (
+		.clk,
+		.rst_n,
+		.command,
+		.regData1, .regData2,
+		.equ, .less, .greater_or_equal,
+		
+		.load_de(load[0]),
+		.write_enable_de(write_enable[0]),
+		.RAM_write_enable_de(RAM_write_enable[0]),
+		.Data1_de, .Data2_de,
+		.address1, .address2,
+		.address_write_de(address_write[0]),
 
-            OP_STORE: begin
-                Data1_o = regData1;
-                Data2_o = imm;
-                RAM_write_enable[0] = WRITE;
-                execute_mode = STORE;
-            end
+		.execute_mode,
+		.jump_condition
+	);
 
-            OP_STORER: begin 
-                RAM_write_enable[0] = WRITE;
-                execute_mode = STORER;
-            end
-
-            OP_MOV: begin
-                write_enable[0] = WRITE;
-                execute_mode = MOV;
-            end
-
-            // Memory
-            OP_LOAD: begin
-                write_enable[0] = WRITE;
-                load[0] = true;
-            end
-
-            OP_LOADI: begin
-                write_enable[0] = WRITE;
-            end
-
-            OP_LOADR: begin // LOADR R0 R1 ; R0 = BRAM[R1]
-                write_enable[0] = WRITE;
-                load[0] = true;
-            end
-
-            // Jump and Branch
-            OP_JMP: begin
-                Data1_o = imm;
-                jump_condition = true;
-            end
-            OP_JNZ: begin
-                Data1_o = imm;
-                jump_condition = (regData1 != 0);
-            end
-            OP_JAL: begin
-                Data1_o = imm;
-                jump_condition = true;
-                write_enable[0] = WRITE;
-            end
-            OP_JMPR: begin
-                Data1_o = regData1;
-                jump_condition = true;
-            end
-
-            OP_BEQ: begin
-                Data1_o = imm;
-                jump_condition = equ;
-            end
-            OP_BNE: begin
-                Data1_o = imm;
-                jump_condition = ~equ;
-            end 
-            OP_BLT: begin
-                Data1_o = imm;
-                jump_condition = less;
-            end 
-            OP_BGE: begin
-                Data1_o = imm;
-                jump_condition = greater_or_equal;
-            end
-            default: begin
-            end
-        endcase
-    end
-
-    RegData Data1, Data2;
-    always_comb begin : forwarding_multiplexer
+	
+	always_comb begin : forwarding_multiplexer //MARK: Forwarding
+		Data1 = Data1_de;
+		Data2 = Data2_de;
         case (address1)
-            address_write[1]: begin Data1 = data_in[1]; end // execute stage
-            address_write[2]: begin Data1 = data_in[2]; end // write back stage
-            default:          begin Data1 = Data1_o;    end
+            address_write[1]: if (write_enable[1] == WRITE) begin Data1 = data_in[1]; 	end // execute stage
+            address_write[1]: if (write_enable[1] == WRITE) begin Data1 = RAM_out[15:0]; 	end // prev is load
+            address_write[2]: if (write_enable[2] == WRITE) begin Data1 = data_in[2]; 	end // write back stage
+            default:          begin Data1 = Data1_de;    	end
         endcase
 
         case (address2)
-            address_write[1]: begin Data2 = data_in[1]; end
-            address_write[2]: begin Data2 = data_in[2]; end
-            default:          begin Data2 = Data2_o;    end
+			address_write[1]: if (write_enable[1] == WRITE) begin Data2 = data_in[1]; end
+            address_write[1]: if (write_enable[1] == WRITE) begin Data2 = RAM_out[15:0]; end 
+            address_write[2]: if (write_enable[2] == WRITE) begin Data2 = data_in[2]; end
+            default:          begin Data2 = Data2_de;    end
         endcase
     end
-
     
     logic [1:0] after_jump_lock;
     // MARK: Execute stage
@@ -358,6 +269,7 @@ module pipeline(
         .RAM_write_enable(RAM_write_enable[1]), 
         .RAM_addr,
         .RAM_in,
+		.RAM_out,
         .updated,
 
         // signals for registers
