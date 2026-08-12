@@ -125,28 +125,27 @@ module pipeline(
 		.jump_condition
 	);
 
-	
+	//TODO: add forwarding for load instruction
 	always_comb begin : forwarding_multiplexer //MARK: Forwarding
 		Data1 = Data1_de;
 		Data2 = Data2_de;
         case (address1)
-            address_write[1]: if (write_enable[1] == WRITE) begin Data1 = data_in[1]; 	end // execute stage
-            address_write[1]: if (write_enable[1] == WRITE) begin Data1 = RAM_out[15:0]; 	end // prev is load
-            address_write[2]: if (write_enable[2] == WRITE) begin Data1 = data_in[2]; 	end // write back stage
-            default:          begin Data1 = Data1_de;    	end
+            address_write[1]: if (write_enable[1] == WRITE) begin Data1 = data_in[1]; end // execute stage
+            address_write[2]: if (write_enable[2] == WRITE) begin Data1 = data_in[2]; end // write back stage
+            default:                                        begin Data1 = Data1_de;   end
         endcase
 
         case (address2)
 			address_write[1]: if (write_enable[1] == WRITE) begin Data2 = data_in[1]; end
-            address_write[1]: if (write_enable[1] == WRITE) begin Data2 = RAM_out[15:0]; end 
             address_write[2]: if (write_enable[2] == WRITE) begin Data2 = data_in[2]; end
-            default:          begin Data2 = Data2_de;    end
+            default:                                        begin Data2 = Data2_de;   end
         endcase
     end
     
     logic [1:0] after_jump_lock;
     // MARK: Execute stage
     always_ff @(posedge clk, negedge rst_n) begin : Execute_Stage
+        update_seg <= false;
         if (!rst_n) begin
             pc <= 0;
 

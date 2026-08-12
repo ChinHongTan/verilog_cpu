@@ -1,6 +1,6 @@
 `include "top.svh"
 
-module decode (
+module decode(
 	input clk,
 	input rst_n,
 	input RAM_Data command,
@@ -96,36 +96,50 @@ module decode (
             OP_JMP: begin
                 Data1_de = imm;
                 jump_condition = true;
+                execute_mode = JUMP;
             end
             OP_JNZ: begin
                 Data1_de = imm;
                 jump_condition = (regData1 != 0);
+                execute_mode = JUMP;
             end
             OP_JAL: begin
                 Data1_de = imm;
                 jump_condition = true;
                 write_enable_de = WRITE;
+                execute_mode = JUMP;
             end
             OP_JMPR: begin
                 Data1_de = regData1;
                 jump_condition = true;
+                execute_mode = JUMP;
             end
 
             OP_BEQ: begin
                 Data1_de = imm;
                 jump_condition = equ;
+                execute_mode = JUMP;
             end
             OP_BNE: begin
                 Data1_de = imm;
                 jump_condition = ~equ;
+                execute_mode = JUMP;
             end 
             OP_BLT: begin
                 Data1_de = imm;
                 jump_condition = less;
+                execute_mode = JUMP;
             end 
             OP_BGE: begin
                 Data1_de = imm;
                 jump_condition = greater_or_equal;
+                execute_mode = JUMP;
+            end
+            OP_HALT: begin
+                execute_mode = HALT;
+            end
+            OP_NOP: begin
+                execute_mode = NONE;
             end
             default: begin
             end
