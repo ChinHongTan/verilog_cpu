@@ -5,7 +5,7 @@ module decode(
 	input rst_n,
 	input RAM_Data command,
 	input RegData regData1, regData2,
-    input bool clear_op,
+    input clear_op,
 	input equ, less, greater_or_equal,
 
 	output bool load_de,
@@ -14,6 +14,7 @@ module decode(
 	output RegData Data1_de, Data2_de,
 	output RegAddr address1, address2,
 	output RegAddr address_write_de,
+    output bool read1, read2,
     output ALU_Pkg::ALU_Mode ALU_mode,
 	output execute_mode_t execute_mode,
 	output logic jump_condition,
@@ -76,16 +77,23 @@ module decode(
         execute_mode = NONE;
         load_de = false;
         jal = false;
-        case (opcode) // execute stage
+        read1 = false;
+        read2 = false;
+        if (clear_op) begin
+            execute_mode <= NONE;
+        end else case (opcode) // execute stage
             OP_ADD, OP_SUB, OP_MUL, OP_DIV: begin
                 Data1_de = regData1;
                 Data2_de = regData2;
+                read1 = true;
+                read2 = true;
                 write_enable_de = WRITE;
                 execute_mode = CALC;
             end
             OP_ADDI, OP_SUBI: begin
                 Data1_de = regData1;
                 Data2_de = imm;
+                read1 = true;
                 write_enable_de = WRITE;
                 execute_mode = CALC;
             end
@@ -93,6 +101,7 @@ module decode(
             OP_STORE: begin
                 Data1_de = regData1;
                 Data2_de = imm;
+                read1 = true;
                 RAM_write_enable_de = WRITE;
                 execute_mode = STORE;
             end
@@ -103,9 +112,10 @@ module decode(
             end
 
             OP_MOV: begin
+                Data1_de = regData1;
+                read1 = true;
                 write_enable_de = WRITE;
                 execute_mode = MOV;
-                Data1_de = regData1;
             end
 
             // Memory
@@ -115,9 +125,9 @@ module decode(
             end
 
             OP_LOADI: begin
+                Data1_de = imm;
                 write_enable_de = WRITE;
                 execute_mode = MOV;
-                Data1_de = imm;
             end
 
             OP_LOADR: begin // LOADR R0 R1 ; R0 = BRAM[R1]
@@ -131,7 +141,7 @@ module decode(
                 jump_condition = true;
                 execute_mode = JUMP;
             end
-            OP_JNZ: begin
+            OP_JNZ: begin //TODO forwarding
                 Data1_de = imm;
                 jump_condition = (regData1 != 0); //TODO throw into ALU
                 execute_mode = JUMP;
@@ -146,6 +156,7 @@ module decode(
             end
             OP_JMPR: begin
                 Data1_de = regData1;
+                read1 = true;
                 jump_condition = true;
                 execute_mode = JUMP;
             end

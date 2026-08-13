@@ -1,5 +1,4 @@
 `timescale 1ns / 1ps
-`include "top.sv"
 
 module CPU_tb;
     logic clk;

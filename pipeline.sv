@@ -16,12 +16,12 @@ module pipeline(
     assign pause = bool'(~updated || freeze);
 
 	logic clk_1Hz;
-    // to1Hz to1Hz_inst(
-    //     .clk,
-	// 	.rst_n,
-	// 	.out(clk_1Hz)
-    // );
-    assign clk_1Hz = clk;
+    to1Hz to1Hz_inst(
+        .clk,
+        .rst_n,
+        .out(clk_1Hz)
+    );
+    //assign clk_1Hz = clk;
     ALU_Pkg::ALU_Mode ALU_mode;
 
     // Registers
@@ -34,11 +34,11 @@ module pipeline(
     RW [2:0] write_enable; 
 
     // IR (ROM)
-    RAM_Address pc;                             // address of next instruction
-    RAM_Data command;                           // instruction register fetched from BRAM
+    RAM_Address pc;                             // address of next instructionAM
     assign led[7:0] = pc;
 
     // RAM (data)
+    RAM_Data command;                           // instruction register fetched from BR
     // 1: current out, 2: previous out for reg
     RAM_Address RAM_addr;
     RAM_Data RAM_in;
@@ -85,7 +85,8 @@ module pipeline(
 
 	execute_mode_t execute_mode;
 	logic jump_condition;
-    bool clear_op;
+    logic clear_op;
+    bool read1, read2;
 	decode decode_inst (
 		.clk,
 		.rst_n,
@@ -99,6 +100,7 @@ module pipeline(
 		.RAM_write_enable_de(RAM_write_enable[0]),
 		.Data1_de, .Data2_de,
 		.address1, .address2,
+        .read1, .read2,
 		.address_write_de(address_write[0]),
         .ALU_mode,
 		.execute_mode,
@@ -110,13 +112,17 @@ module pipeline(
 	always_comb begin : forwarding_multiplexer //MARK: Forwarding
         Data1 = Data1_de;
         Data2 = Data2_de;
-        if (address1 == address_write[1] && write_enable[1] == WRITE) begin 
+        if (!read1) begin
+            Data1 = Data1_de;
+        end else if (address1 == address_write[1] && write_enable[1] == WRITE) begin 
             Data1 = data_in[1]; // execute stage
         end else if (address1 == address_write[2] && write_enable[2] == WRITE) begin 
             Data1 = data_in[2]; // write back stage
         end
 
-        if (address2 == address_write[1] && write_enable[1] == WRITE) begin 
+        if (!read2) begin
+            Data2 = Data2_de;
+        end else if (address2 == address_write[1] && write_enable[1] == WRITE) begin 
             Data2 = data_in[1]; 
         end else if (address2 == address_write[2] && write_enable[2] == WRITE) begin 
             Data2 = data_in[2]; 
@@ -124,7 +130,7 @@ module pipeline(
     end
 
     logic [3:0] in3, in2, in1, in0;
-    logic [1:0] after_jump_lock;
+    logic after_jump_lock;
     // MARK: Execute stage
     always_ff @(posedge clk, negedge rst_n) begin : Execute_Stage
         update_seg <= false;
@@ -164,14 +170,8 @@ module pipeline(
             data_in[1] <= 0;
             address_write[1] <= address_write[0];
 
-            if (after_jump_lock != 2'b00) begin : solve_control_hazard
-                if (after_jump_lock == 2'b1) begin
-                    pc <= pc; // don't jump
-                    
-                end
-                if (after_jump_lock == 2'd2) begin
-                    pc <= pc; // don't jump
-                end
+            if (after_jump_lock != 0) begin : solve_control_hazard
+                pc <= pc; // don't jump
                 after_jump_lock <= after_jump_lock + 1;
 
                 // block the signals
@@ -224,7 +224,7 @@ module pipeline(
                         clear_op <= true;
                         //TODO change next ir to nop
                         if (jal) begin
-                            data_in[1] <= pc + 1; // store the next instruction address into reg
+                            data_in[1] <= pc - 1; // store the next instruction address into reg
                         end
                     end
                 end
