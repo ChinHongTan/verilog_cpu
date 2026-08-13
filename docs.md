@@ -61,7 +61,7 @@ STORE                   [op - 5][empty - 3][rs1   - 3][empty - 3][BRAM adr - 16]
 
 JMPR:                   [op - 5][empty - 3][rs1   - 3][empty - 3][empty    - 16]
 
-### 
+### register operations
 MOV:                    [op - 5][rd    - 3][rs1   - 3][empty - 3][empty    - 16]
 LOADR:                  [op - 5][rd    - 3][rs1   - 3][empty - 3][empty    - 16]
 

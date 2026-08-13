@@ -85,11 +85,13 @@ module pipeline(
 
 	execute_mode_t execute_mode;
 	logic jump_condition;
+    bool clear_op;
 	decode decode_inst (
 		.clk,
 		.rst_n,
 		.command,
 		.regData1, .regData2,
+        .clear_op,
 		.equ, .less, .greater_or_equal,
 		
 		.load_de(load[0]),
@@ -106,27 +108,34 @@ module pipeline(
 
 	//TODO: add forwarding for load instruction
 	always_comb begin : forwarding_multiplexer //MARK: Forwarding
-		Data1 = Data1_de;
-		Data2 = Data2_de;
-        case (address1)
-            address_write[1]: if (write_enable[1] == WRITE) begin Data1 = data_in[1]; end // execute stage
-            address_write[2]: if (write_enable[2] == WRITE) begin Data1 = data_in[2]; end // write back stage
-            default:                                        begin Data1 = Data1_de;   end
-        endcase
+        Data1 = Data1_de;
+        Data2 = Data2_de;
+        if (address1 == address_write[1] && write_enable[1] == WRITE) begin 
+            Data1 = data_in[1]; // execute stage
+        end else if (address1 == address_write[2] && write_enable[2] == WRITE) begin 
+            Data1 = data_in[2]; // write back stage
+        end
 
-        case (address2)
-			address_write[1]: if (write_enable[1] == WRITE) begin Data2 = data_in[1]; end
-            address_write[2]: if (write_enable[2] == WRITE) begin Data2 = data_in[2]; end
-            default:                                        begin Data2 = Data2_de;   end
-        endcase
+        if (address2 == address_write[1] && write_enable[1] == WRITE) begin 
+            Data2 = data_in[1]; 
+        end else if (address2 == address_write[2] && write_enable[2] == WRITE) begin 
+            Data2 = data_in[2]; 
+        end
     end
-    
+
+    logic [3:0] in3, in2, in1, in0;
     logic [1:0] after_jump_lock;
     // MARK: Execute stage
     always_ff @(posedge clk, negedge rst_n) begin : Execute_Stage
         update_seg <= false;
+        clear_op <= false;
         if (!rst_n) begin
             pc <= 0;
+
+            in3 <= 4'b0;
+            in2 <= 4'b0;
+            in1 <= 4'b0;
+            in0 <= 4'b0;
 
             // write enable signals 
             RAM_write_enable[1] <= READ;
@@ -158,6 +167,10 @@ module pipeline(
             if (after_jump_lock != 2'b00) begin : solve_control_hazard
                 if (after_jump_lock == 2'b1) begin
                     pc <= pc; // don't jump
+                    
+                end
+                if (after_jump_lock == 2'd2) begin
+                    pc <= pc; // don't jump
                 end
                 after_jump_lock <= after_jump_lock + 1;
 
@@ -171,6 +184,9 @@ module pipeline(
                 data_in[1] <= 0;
                 address_write[1] <= 0;
             end else case (execute_mode) // execute stage
+                NONE: begin
+                end
+
                 CALC: begin
                     data_in[1] <= result;
                 end
@@ -180,9 +196,14 @@ module pipeline(
                 end
 
                 STORE: begin
-                    if (Data2 >= 16'd65_500) begin : update_display
+                    if (Data2 >= 16'd65_500) begin : update_display //TODO throw into ALU
                         update_seg <= true;
-                        write_enable[1] <= READ;
+                        RAM_write_enable[1] <= READ;
+
+                        in3 <= 4'((Data1 / 1000) % 10);
+                        in2 <= 4'((Data1 / 100) % 10);
+                        in1 <= 4'((Data1 / 10) % 10);
+                        in0 <= 4'(Data1 % 10);
                     end else begin 
                         RAM_in <= {16'b0, Data2}; // imm
                     end
@@ -200,23 +221,20 @@ module pipeline(
                     if (jump_condition) begin
                         pc <= overflow_16to8b(Data1); // imm or RegData1
                         after_jump_lock <= 2'b01;
+                        clear_op <= true;
                         //TODO change next ir to nop
-                    end
-                    if (jal) begin
-                        data_in[1] <= pc + 1; // store the next instruction address into reg
+                        if (jal) begin
+                            data_in[1] <= pc + 1; // store the next instruction address into reg
+                        end
                     end
                 end
                 default: begin
-                    if (jump_condition) begin
-                        pc <= overflow_16to8b(Data1); // imm or RegData1
-                        after_jump_lock <= 2'b01;
-                    end
                 end
             endcase
         end
     end
 
-    logic [3:0] in3, in2, in1, in0;
+    
     seg_four seg_four_inst(
         .clk,
         .rst_n,
@@ -228,20 +246,6 @@ module pipeline(
         .an,
         .SSD(seg)
     );
-
-    always_ff @(posedge clk_1Hz, negedge rst_n) begin : seg_control // MARK: SEG_CONTROL
-        if (!rst_n) begin
-            in3 <= 4'b0;
-            in2 <= 4'b0;
-            in1 <= 4'b0;
-            in0 <= 4'b0;
-        end else if (update_seg == true) begin
-            in3 <= 4'((regData1 / 1000) % 10);
-            in2 <= 4'((regData1 / 100) % 10);
-            in1 <= 4'((regData1 / 10) % 10);
-            in0 <= 4'(regData1 % 10);
-        end
-    end
 
     // MARK: RAM Data
     memory RAM( // 2 stages delay

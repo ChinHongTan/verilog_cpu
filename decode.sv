@@ -5,6 +5,7 @@ module decode(
 	input rst_n,
 	input RAM_Data command,
 	input RegData regData1, regData2,
+    input bool clear_op,
 	input equ, less, greater_or_equal,
 
 	output bool load_de,
@@ -35,6 +36,9 @@ module decode(
             address1         <= command[23:21];         // second reg
             address2         <= command[20:18];         // third reg
             imm              <= command[17:2];          // immediate value
+            if (clear_op) begin
+                opcode           <= OP_NOP;
+            end
         end
     end
 
@@ -101,6 +105,7 @@ module decode(
             OP_MOV: begin
                 write_enable_de = WRITE;
                 execute_mode = MOV;
+                Data1_de = regData1;
             end
 
             // Memory
@@ -111,6 +116,7 @@ module decode(
 
             OP_LOADI: begin
                 write_enable_de = WRITE;
+                execute_mode = MOV;
                 Data1_de = imm;
             end
 
@@ -127,7 +133,7 @@ module decode(
             end
             OP_JNZ: begin
                 Data1_de = imm;
-                jump_condition = (regData1 != 0);
+                jump_condition = (regData1 != 0); //TODO throw into ALU
                 execute_mode = JUMP;
             end
             OP_JAL: begin
