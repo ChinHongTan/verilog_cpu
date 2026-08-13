@@ -106,7 +106,7 @@ module top(
     wire [`REG_WIDTH - 1:0] imm = current_ir[23:8];                 // label / bram / imm - 16 bit
     wire [`ADDR_WIDTH - 1:0] imm_max = overflow_16to8b(imm);        // saturate to 0xFF
 
-    wire [`REG_WIDTH - 1:0] branch_imm = current_ir[20:5];          // read from BRAM output
+    wire [`REG_WIDTH - 1:0] imm_3op = current_ir[20:5];             // imm / label of the 3-operand forms (ADDI/SUBI, branches)
     assign led[15:11] = opcode;
 
     always_ff @(posedge clk_1Hz, negedge rst_n) begin : Main_FSM    // MARK: MAIN
@@ -160,7 +160,7 @@ module top(
                         address1      <= adrB;
                         if (wait_jump == 2'b1) begin
                             ALU_Data1 <= regData1;
-                            ALU_Data2 <= imm;
+                            ALU_Data2 <= imm_3op;
                             ALU_op <= 1;
                         end else if (ALU_state == ALU_Pkg::ALU_DONE) begin
                             write_enable <= WRITE;
@@ -289,7 +289,7 @@ module top(
                                 (opcode == OP_BLT && regData1 <  regData2) ||
                                 (opcode == OP_BGE && regData1 >= regData2)
                             ) begin 
-                                pc <= overflow_16to8b(branch_imm);
+                                pc <= overflow_16to8b(imm_3op);
                             end
                         end else if (wait_jump == 2'd2) begin 
                             state <= FETCH;
