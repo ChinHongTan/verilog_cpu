@@ -15,13 +15,13 @@ module pipeline(
     bool jal;
     assign pause = bool'(~updated || freeze);
 
-	logic clk_1Hz;
+	logic clk_main;
     to1Hz to1Hz_inst(
         .clk,
         .rst_n,
-        .out(clk_1Hz)
+        .out(clk_main)
     );
-    //assign clk_1Hz = clk;
+    //assign clk_main = clk;
     ALU_Pkg::ALU_Mode ALU_mode;
 
     // Registers
@@ -48,7 +48,7 @@ module pipeline(
     bool update_seg;
 
     Registers reg_inst(
-        .clk,
+        .clk(clk_main),
         .rst_n,
         .address1,
         .address2,
@@ -61,7 +61,7 @@ module pipeline(
     );
 
     fetch fetch_inst(
-        .clk,
+        .clk(clk_main),
         .pc,
         .ir(command)
     );
@@ -88,7 +88,7 @@ module pipeline(
     logic clear_op;
     bool read1, read2;
 	decode decode_inst (
-		.clk,
+		.clk(clk_main),
 		.rst_n,
 		.command,
 		.regData1, .regData2,
@@ -132,7 +132,7 @@ module pipeline(
     logic [3:0] in3, in2, in1, in0;
     logic after_jump_lock;
     // MARK: Execute stage
-    always_ff @(posedge clk, negedge rst_n) begin : Execute_Stage
+    always_ff @(posedge clk_main, negedge rst_n) begin : Execute_Stage
         update_seg <= false;
         clear_op <= false;
         if (!rst_n) begin
@@ -249,7 +249,7 @@ module pipeline(
 
     // MARK: RAM Data
     memory RAM( // 2 stages delay
-        .clk(clk_1Hz),
+        .clk(clk_main),
         .rst_n,
         .RAM_write_enable(RAM_write_enable[1]), 
         .RAM_addr,
