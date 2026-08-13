@@ -16,11 +16,12 @@ module pipeline(
     assign pause = bool'(~updated || freeze);
 
 	logic clk_1Hz;
-    to1Hz to1Hz_inst(
-        .clk,
-		.rst_n,
-		.out(clk_1Hz)
-    );
+    // to1Hz to1Hz_inst(
+    //     .clk,
+	// 	.rst_n,
+	// 	.out(clk_1Hz)
+    // );
+    assign clk_1Hz = clk;
     ALU_Pkg::ALU_Mode ALU_mode;
 
     // Registers
@@ -64,34 +65,10 @@ module pipeline(
         .pc,
         .ir(command)
     );
-    operation_t opcode;
-    assign opcode = operation_t'(command[31:27]); // current operation in DECODE
 
     // MARK: ALU
     logic Z, N, C, V;
-    always_comb begin : ALU_Control
-        case (opcode)
-            OP_ADD, OP_ADDI: begin
-                ALU_mode = ALU_Pkg::ADD;
-            end
-
-            OP_SUB, OP_SUBI: begin
-                ALU_mode = ALU_Pkg::SUB;
-            end
-
-            OP_MUL: begin
-                ALU_mode = ALU_Pkg::MUL;
-            end
-
-            OP_DIV: begin
-                ALU_mode = ALU_Pkg::DIV;
-            end
-            
-            default: begin : comparing_signal
-                ALU_mode = ALU_Pkg::SUB;
-            end
-        endcase
-    end
+    
     RegData Data1, Data2;
     ALU alu_inst (
         .data1(Data1),
@@ -121,7 +98,7 @@ module pipeline(
 		.Data1_de, .Data2_de,
 		.address1, .address2,
 		.address_write_de(address_write[0]),
-
+        .ALU_mode,
 		.execute_mode,
 		.jump_condition,
         .jal

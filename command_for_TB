@@ -1,2 +1,2 @@
-verilator --binary --trace -Wall --timing -Wno-fatal CPU_tb.sv top.sv; make -C obj_dir -f VCPU_tb.mk;  ./obj_dir/VCPU_tb; gtkwave wave.vcd (linux)
-verilator --binary --trace -Wall --timing -Wno-fatal CPU_tb.sv top.sv && ./obj_dir/VCPU_tb && surfer wave.vcd (mac)
+verilator --binary --trace -Wall --timing -Wno-fatal CPU_tb.sv pipeline.sv; make -C obj_dir -f VCPU_tb.mk;  ./obj_dir/VCPU_tb; gtkwave wave.vcd (linux)
+verilator --binary --trace -Wall --timing -Wno-fatal CPU_tb.sv pipeline.sv && ./obj_dir/VCPU_tb && surfer wave.vcd (mac)

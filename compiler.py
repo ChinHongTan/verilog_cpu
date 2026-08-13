@@ -205,7 +205,6 @@ with open(filename, "r", encoding="utf-8") as f:
 print(compiled_instruction)
 
 with open("ex1.mem", "w", encoding="utf-8") as f:
-    for i in compiled_instruction:
-        f.write(i + "\n")
+    f.writelines(i + "\n" for i in compiled_instruction)
 
     print("Write complete.")

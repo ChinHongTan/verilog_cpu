@@ -13,28 +13,54 @@ module decode(
 	output RegData Data1_de, Data2_de,
 	output RegAddr address1, address2,
 	output RegAddr address_write_de,
+    output ALU_Pkg::ALU_Mode ALU_mode,
 	output execute_mode_t execute_mode,
 	output logic jump_condition,
     output bool jal
 );
 	operation_t opcode;
-    assign opcode = operation_t'(command[31:27]); // current operation in DECODE
+    RegData imm;
 
 	// MARK: Decode addr
     always_ff @(posedge clk or negedge rst_n) begin : decode_stage
         if (!rst_n) begin
+            opcode           <= OP_NOP;
             address_write_de <= 3'b0;         // first reg
             address1         <= 3'b0;         // second reg
             address2         <= 3'b0;         // third reg
+            imm              <= 16'b0;        // immediate value
         end else begin
+            opcode           <= operation_t'(command[31:27]);
             address_write_de <= command[26:24];         // first reg
             address1         <= command[23:21];         // second reg
             address2         <= command[20:18];         // third reg
+            imm              <= command[17:2];          // immediate value
         end
     end
 
-	RegData imm;
-    assign imm = command[17:2]; // immediate value
+    always_comb begin : ALU_Control
+        case (opcode)
+            OP_ADD, OP_ADDI: begin
+                ALU_mode = ALU_Pkg::ADD;
+            end
+
+            OP_SUB, OP_SUBI: begin
+                ALU_mode = ALU_Pkg::SUB;
+            end
+
+            OP_MUL: begin
+                ALU_mode = ALU_Pkg::MUL;
+            end
+
+            OP_DIV: begin
+                ALU_mode = ALU_Pkg::DIV;
+            end
+            
+            default: begin : comparing_signal
+                ALU_mode = ALU_Pkg::SUB;
+            end
+        endcase
+    end
 
 	// MARK: Decode stage
     always_comb begin : decode_control
@@ -85,6 +111,7 @@ module decode(
 
             OP_LOADI: begin
                 write_enable_de = WRITE;
+                Data1_de = imm;
             end
 
             OP_LOADR: begin // LOADR R0 R1 ; R0 = BRAM[R1]
