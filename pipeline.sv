@@ -12,6 +12,7 @@ module pipeline(
     wire freeze = sw[15];
     bool pause;
     bool halt;
+    bool jal;
     assign pause = bool'(~updated || freeze);
 
 	logic clk_1Hz;
@@ -39,7 +40,7 @@ module pipeline(
     // RAM (data)
     // 1: current out, 2: previous out for reg
     RAM_Address RAM_addr;
-    RAM_Data RAM_in, RAM_out;
+    RAM_Data RAM_in;
     RW [1:0] RAM_write_enable;
     
     bool [1:0] load;
@@ -91,9 +92,10 @@ module pipeline(
             end
         endcase
     end
+    RegData Data1, Data2;
     ALU alu_inst (
-        .data1(regData1),
-        .data2(regData2),
+        .data1(Data1),
+        .data2(Data2),
         .mode(ALU_mode),
         .result,
         .Z, .N, .C, .V // Z = zero, N = negative, C = carry, V = overflow
@@ -102,7 +104,6 @@ module pipeline(
     wire equ = Z;
     wire less = N ^ V;
     wire greater_or_equal = ~less;
-	RegData Data1, Data2;
 	RegData Data1_de, Data2_de;
 
 	execute_mode_t execute_mode;
@@ -122,7 +123,8 @@ module pipeline(
 		.address_write_de(address_write[0]),
 
 		.execute_mode,
-		.jump_condition
+		.jump_condition,
+        .jal
 	);
 
 	//TODO: add forwarding for load instruction
@@ -223,6 +225,9 @@ module pipeline(
                         after_jump_lock <= 2'b01;
                         //TODO change next ir to nop
                     end
+                    if (jal) begin
+                        data_in[1] <= pc + 1; // store the next instruction address into reg
+                    end
                 end
                 default: begin
                     if (jump_condition) begin
@@ -268,7 +273,7 @@ module pipeline(
         .RAM_write_enable(RAM_write_enable[1]), 
         .RAM_addr,
         .RAM_in,
-		.RAM_out,
+		//.RAM_out,
         .updated,
 
         // signals for registers
@@ -304,7 +309,6 @@ module memory(
     input logic rst_n,
     input RAM_Address RAM_addr,
     input RAM_Data RAM_in,
-    output RAM_Data RAM_out,
     input RW RAM_write_enable,
     output bool updated,
 
@@ -319,6 +323,7 @@ module memory(
     input bool load, // Whether the data_in is from mem (LOAD/LOADR)
     input bool pause
 );
+    RAM_Data RAM_out;
     RAM_Address RAM_addr_prev;
     always_ff @(posedge clk, negedge rst_n) begin
         if (!rst_n) begin 

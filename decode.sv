@@ -14,7 +14,8 @@ module decode(
 	output RegAddr address1, address2,
 	output RegAddr address_write_de,
 	output execute_mode_t execute_mode,
-	output logic jump_condition
+	output logic jump_condition,
+    output bool jal
 );
 	operation_t opcode;
     assign opcode = operation_t'(command[31:27]); // current operation in DECODE
@@ -36,8 +37,6 @@ module decode(
     assign imm = command[17:2]; // immediate value
 
 	// MARK: Decode stage
-    
-    
     always_comb begin : decode_control
         Data1_de = 0;
         Data2_de = 0;
@@ -46,6 +45,7 @@ module decode(
         RAM_write_enable_de = READ;
         execute_mode = NONE;
         load_de = false;
+        jal = false;
         case (opcode) // execute stage
             OP_ADD, OP_SUB, OP_MUL, OP_DIV: begin
                 Data1_de = regData1;
@@ -108,6 +108,8 @@ module decode(
                 jump_condition = true;
                 write_enable_de = WRITE;
                 execute_mode = JUMP;
+
+                jal = true;
             end
             OP_JMPR: begin
                 Data1_de = regData1;
