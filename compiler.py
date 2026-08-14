@@ -5,9 +5,13 @@
 # Instruction format:
 # [OPCODE][ARG1][ARG2]
 
+import re
+import sys
 from enum import IntEnum
 from typing import Literal
-import re
+
+DEFAULTFILENAME = "program1.txt"
+filename = sys.argv[1] if len(sys.argv) > 1 else DEFAULTFILENAME
 
 class Opcode(IntEnum):
     NOP    = 0
@@ -80,7 +84,6 @@ SLOT_OFFSET: dict[DataType, int] = {
 }
 
 compiled_instruction: list[str] = []
-filename = "program2.txt"
 line_count = 0
 
 def encode(code: str, args: list[str | int]) -> None:

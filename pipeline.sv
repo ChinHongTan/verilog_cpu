@@ -181,7 +181,7 @@ module pipeline(
             address_write[1] <= address_write[0];
 
             if (halt || (after_jump_lock != 0)) begin : solve_control_hazard
-                //pc <= pc; // don't jump
+                if (halt) pc <= pc; // don't jump
 
                 // block the signals
                 RAM_write_enable[1] <= READ;
