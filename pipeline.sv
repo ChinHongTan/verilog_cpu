@@ -29,9 +29,9 @@ module pipeline(
     RegData result;                             // data feed into ALU; output from ALU
     RegAddr address1, address2;                 // NEVER be number [3 bit]
 
-    RegData [2:1] data_in;                      // used to send data into register
-    RegAddr [2:0] address_write;
-    RW [2:0] write_enable; 
+    RegData [2:1] data_in /*verilator split_var*/;   // used to send data into register
+    RegAddr [2:0] address_write /*verilator split_var*/;
+    RW [2:0] write_enable /*verilator split_var*/;
 
     // IR (ROM)
     RAM_Address pc;                             // address of next instructionAM
@@ -42,9 +42,9 @@ module pipeline(
     // 1: current out, 2: previous out for reg
     RAM_Address RAM_addr;
     RAM_Data RAM_in;
-    RW [1:0] RAM_write_enable;
-    
-    bool [1:0] load;
+    RW [1:0] RAM_write_enable /*verilator split_var*/;
+
+    bool [1:0] load /*verilator split_var*/;
     bool update_seg;
 
     Registers reg_inst(

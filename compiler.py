@@ -80,12 +80,12 @@ SLOT_OFFSET: dict[DataType, int] = {
 }
 
 compiled_instruction: list[str] = []
-filename = "program1.txt"
+filename = "program2.txt"
 line_count = 0
 
 def encode(code: str, args: list[str | int]) -> None:
     print(code, args)
-    instruction_val = Opcode[code] << 27
+    instruction_val = Opcode[code] << 27 
 
     formats = INSTRUCTION_FORMATS[code]
     

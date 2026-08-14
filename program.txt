@@ -3,7 +3,7 @@
 LOADI R0 1      ; first operand
 LOADI R1 1      ; second operand
 LOADI R2 0      ; result
-LOADI R3 7      ; loop time
+LOADI R3 20      ; loop time
 LOADI R4 1      ; constant
 
 LABEL:
