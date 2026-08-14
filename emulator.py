@@ -87,9 +87,12 @@ def disasm(opcode: str | None, operands: list[int]):
         return "??? undecodable"
     parts: list[str] = []
     for (kind, _w), val in zip(INSTRUCTION_FORMATS[opcode], operands):
-
         match kind:
-            case "REG":
+            case "RD":
+                parts.append(f"R{val}")
+            case "RS1":
+                parts.append(f"R{val}")
+            case "RS2":
                 parts.append(f"R{val}")
             case "BRAM":
                 parts.append("DISPLAY" if val >= 65500 else f"[{val}]")
