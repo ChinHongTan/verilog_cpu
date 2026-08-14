@@ -12,8 +12,7 @@ module decode(
 	output RW write_enable_de,
 	output RW RAM_write_enable_de,
 	output RegData Data1_de, Data2_de,
-	output RegData jump_target_de,      // immediate target
-	output bool jump_reg,               // target is the forwarded Data1
+	output RegData jump_target,      // immediate target
 	output RegAddr address1, address2,
 	output RegAddr address_write_de,
     output bool read1, read2,
@@ -73,8 +72,7 @@ module decode(
     always_comb begin : decode_control
         Data1_de = 0;
         Data2_de = 0;
-        jump_target_de = imm;
-        jump_reg = false;
+        jump_target = 0;
         write_enable_de = READ;
         RAM_write_enable_de = READ;
         execute_mode = NONE;
@@ -103,7 +101,7 @@ module decode(
 
             OP_STORE: begin
                 Data1_de = regData1;
-                Data2_de = imm;
+                Data2_de = imm;		 // RAM addr
                 read1 = true;
                 RAM_write_enable_de = WRITE;
                 execute_mode = STORE;
@@ -140,30 +138,32 @@ module decode(
 
             // Jump and Branch
             OP_JMP: begin
-                Data1_de = imm;
+				jump_target = imm;
                 execute_mode = JUMP;
             end
             OP_JNZ: begin
                 Data1_de = regData1;
+				jump_target = imm;
                 read1 = true;
                 execute_mode = JUMP;
             end
             OP_JAL: begin
+				jump_target = imm;
                 write_enable_de = WRITE;
                 execute_mode = JUMP;
 
                 jal = true;
             end
             OP_JMPR: begin
-                Data1_de = regData1;
+                jump_target = regData1;
                 read1 = true;
-                jump_reg = true;    // target is a register, not the immediate
                 execute_mode = JUMP;
             end
 
             OP_BEQ, OP_BNE, OP_BLT, OP_BGE: begin
                 Data1_de = regData1;
                 Data2_de = regData2;
+				jump_target = imm;
                 read1 = true;
                 read2 = true;
                 execute_mode = JUMP;

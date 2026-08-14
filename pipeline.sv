@@ -86,7 +86,6 @@ module pipeline(
 	execute_mode_t execute_mode;
 	logic jump_condition;
 	RegData jump_target;
-	bool jump_reg;
     logic clear_op;
     bool read1, read2;
 	decode decode_inst (
@@ -101,8 +100,7 @@ module pipeline(
 		.write_enable_de(write_enable[0]),
 		.RAM_write_enable_de(RAM_write_enable[0]),
 		.Data1_de, .Data2_de,
-		.jump_target_de(jump_target),
-		.jump_reg,
+		.jump_target,
 		.address1, .address2,
         .read1, .read2,
 		.address_write_de(address_write[0]),
@@ -158,6 +156,8 @@ module pipeline(
             // signals for REG
             data_in[1] <= 0;
             address_write[1] <= 0;
+
+            halt <= false;
         end else if (!pause) begin : Decode_to_Execute
             pc <= pc + 1;
 
@@ -174,9 +174,8 @@ module pipeline(
             data_in[1] <= 0;
             address_write[1] <= address_write[0];
 
-            if (after_jump_lock != 0) begin : solve_control_hazard
+            if (halt || (after_jump_lock != 0)) begin : solve_control_hazard
                 pc <= pc; // don't jump
-                after_jump_lock <= after_jump_lock + 1;
 
                 // block the signals
                 RAM_write_enable[1] <= READ;
@@ -187,6 +186,8 @@ module pipeline(
 
                 data_in[1] <= 0;
                 address_write[1] <= 0;
+
+				if (!halt) after_jump_lock <= after_jump_lock + 1;
             end else case (execute_mode) // execute stage
                 NONE: begin
                 end
@@ -223,7 +224,7 @@ module pipeline(
 
                 JUMP: begin
                     if (jump_condition) begin
-                        pc <= overflow_16to8b((jump_reg == true) ? Data1 : jump_target);
+                        pc <= overflow_16to8b(jump_target);
                         after_jump_lock <= 2'b01;
                         clear_op <= true;
                         //TODO change next ir to nop
