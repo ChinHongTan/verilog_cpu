@@ -13,11 +13,11 @@ module BRAM (
 		if (`MEM_INIT_FILE != "") begin
 			$readmemb(`MEM_INIT_FILE, bram);
 		end else begin
-			bram <= '{default: '0};
+			bram = '{default: '0};
 		end
 	end
 
-	always_ff @(posedge clk) begin : bram_access // NEVER RESET RAM
+	always @(posedge clk) begin : bram_access // NEVER RESET RAM
 		if (write) begin
 			bram[address] <= in;    // write operation
 		end

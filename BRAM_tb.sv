@@ -19,7 +19,7 @@ module BRAM_tb;
 	always #5 clk <= ~clk;
 
 	initial begin
-		write = 0;
+		write = READ;
 		address = 0; #10;
 		$display("Address=0 Data=%h", out); // Reads initial value 0x00
 
@@ -27,8 +27,8 @@ module BRAM_tb;
 		$display("Address=1 Data=%h", out); // Reads initial value 0x01
 
 		// Write to memory
-			write = 1; address = 2; in = 32'h0055; 
-		#10 write = 0; address = 2; 
+			write = WRITE; address = 2; in = 32'h0055; 
+		#10 write = READ;  address = 2; 
 		#10 $display("Address=2 Data(after write)=%h", out); // Reads 0x55
 
 

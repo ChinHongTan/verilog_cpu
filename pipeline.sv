@@ -48,7 +48,6 @@ module pipeline(
     RW [1:0] RAM_write_enable /*verilator split_var*/;
 
     bool [1:0] load /*verilator split_var*/;
-    bool update_seg;
 
     Registers reg_inst(
         .clk(clk_main),
@@ -138,7 +137,6 @@ module pipeline(
     logic after_jump_lock;
     // MARK: Execute stage
     always_ff @(posedge clk_main, negedge rst_n) begin : Execute_Stage
-        update_seg <= false;
         clear_op <= false;
         if (!rst_n) begin
             pc <= 0;
@@ -161,6 +159,7 @@ module pipeline(
             address_write[1] <= 0;
 
             halt <= false;
+            after_jump_lock <= 0;
         end else if (!pause) begin : Decode_to_Execute
             pc <= pc + 1;
 
@@ -205,7 +204,6 @@ module pipeline(
 
                 STORE: begin
                     if (Data2 >= 16'd65_500) begin : update_display //TODO throw into ALU
-                        update_seg <= true;
                         RAM_write_enable[1] <= READ;
 
                         in3 <= 4'((Data1 / 1000) % 10);
@@ -274,7 +272,7 @@ module pipeline(
         .data_in_wb(data_in[2]),
 
         .load(load[1]), // Whether the data_in is from mem (LOAD/LOADR)
-        .pause
+        .pause(freeze)  // !! Don't let RAM pause itself
     );
 endmodule
 
@@ -310,7 +308,7 @@ module memory(
     output RegData data_in_wb,
 
     input bool load, // Whether the data_in is from mem (LOAD/LOADR)
-    input bool pause
+    input pause
 );
     RAM_Data RAM_out;
     RAM_Address RAM_addr_prev;
@@ -321,6 +319,8 @@ module memory(
             write_enable_wb <= READ;
             address_write_wb <= 0;
             data_in_wb <= 0;
+        end else if (pause) begin
+            // do nothing
         end else if (RAM_write_enable == READ && RAM_addr_prev != RAM_addr) begin
             updated <= false;
             RAM_addr_prev <= RAM_addr;
