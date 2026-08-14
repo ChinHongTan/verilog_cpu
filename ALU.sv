@@ -9,14 +9,16 @@ module ALU
     output logic Z, N, C, V // Z = zero, N = negative, C = carry, V = overflow
 ); // ARM / RISC-V 
     RegData out_comb;
+    logic [31:0] full;
     always_comb begin
         C = 1'b0;
         V = 1'b0;
+        full = 0;
         case (mode)
             ADD: begin {C, out_comb} = data1 + data2; V = (data1[15] == data2[15]) && (out_comb[15] != data1[15]); end
             SUB: begin {C, out_comb} = data1 - data2; V = (data1[15] != data2[15]) && (out_comb[15] != data1[15]); end
             MUL: begin
-                static logic [31:0] full = data1 * data2; // 16bit multiplier gets 32 bits results max
+                full = data1 * data2; // 16bit multiplier gets 32 bits results max
                 out_comb = full[15:0]; //TODO ZNCV
                 V = |full[31:16]; // top 16 bits of the result
             end

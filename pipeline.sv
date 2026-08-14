@@ -18,6 +18,7 @@ module pipeline(
 	logic clk_main;
     `ifdef SIM_SPEEDUP 
         assign clk_main = clk;  // Testbench / Simulation
+        int step_counter = -2; //TODO step_counter
     `else
         to1Hz to1Hz_inst(       // for FPGA
             .clk   (clk),
@@ -162,6 +163,9 @@ module pipeline(
             after_jump_lock <= 0;
         end else if (!pause) begin : Decode_to_Execute
             pc <= pc + 1;
+            `ifdef SIM_SPEEDUP 
+                if (!halt && (after_jump_lock == 0) && !jump_condition) step_counter <= step_counter + 1;
+            `endif
 
             // write enable signals 
             RAM_write_enable[1] <= RAM_write_enable[0];
@@ -177,7 +181,7 @@ module pipeline(
             address_write[1] <= address_write[0];
 
             if (halt || (after_jump_lock != 0)) begin : solve_control_hazard
-                pc <= pc; // don't jump
+                //pc <= pc; // don't jump
 
                 // block the signals
                 RAM_write_enable[1] <= READ;

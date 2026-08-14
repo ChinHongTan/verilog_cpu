@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.127 (w)1999-2026 BSI
-[*] Thu Aug 13 10:22:59 2026
+[*] Fri Aug 14 13:25:11 2026
 [*]
 [dumpfile] "wave.vcd"
-[dumpfile_mtime] "Thu Aug 13 09:46:52 2026"
-[dumpfile_size] 76551
+[dumpfile_mtime] "Fri Aug 14 12:56:50 2026"
+[dumpfile_size] 84534
 [savefile] "cpu_sim.gtkw"
-[timestart] 0
+[timestart] 439640
 [size] 1920 991
-[pos] -1 -1
-*-14.829337 39300 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[pos] -25 -23
+*-14.029337 482020 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] CPU_tb.
 [treeopen] CPU_tb.top_inst.
 [sst_width] 273
@@ -20,12 +20,13 @@
 CPU_tb.top_inst.clk
 [color] 3
 CPU_tb.top_inst.pc[7:0]
+CPU_tb.top_inst.step_counter[31:0]
 @2022
 [color] 1
-^4 tb_enum/opcode.txt
+^1 tb_enum/opcode.txt
 CPU_tb.top_inst.decode_inst.opcode[4:0]
 @c02022
-^1 tb_enum/Regaddr_wr.txt
+^2 tb_enum/Regaddr_wr.txt
 CPU_tb.top_inst.address_write[8:0]
 @28
 (0)CPU_tb.top_inst.address_write[8:0]
@@ -41,25 +42,28 @@ CPU_tb.top_inst.address_write[8:0]
 -group_end
 @2022
 [color] 1
-^2 tb_enum/Regaddr.txt
+^3 tb_enum/Regaddr.txt
 CPU_tb.top_inst.address1[2:0]
 [color] 1
-^2 tb_enum/Regaddr.txt
+^3 tb_enum/Regaddr.txt
 CPU_tb.top_inst.address2[2:0]
-@2024
-^5 tb_enum/ALU_mode.txt
+@2025
+^4 tb_enum/ALU_mode.txt
 CPU_tb.top_inst.ALU_mode[2:0]
 @2022
-^3 tb_enum/exe_mode.txt
+^5 tb_enum/exe_mode.txt
 CPU_tb.top_inst.execute_mode[2:0]
-@24
+@25
 [color] 2
 CPU_tb.top_inst.Data1[15:0]
+@24
 CPU_tb.top_inst.Data1_de[15:0]
+@25
 [color] 2
 CPU_tb.top_inst.Data2[15:0]
+@24
 CPU_tb.top_inst.Data2_de[15:0]
-CPU_tb.top_inst.after_jump_lock[1:0]
+CPU_tb.top_inst.jump_target[15:0]
 @c00022
 CPU_tb.top_inst.data_in[31:0]
 @28
@@ -110,9 +114,11 @@ CPU_tb.top_inst.load[1:0]
 CPU_tb.top_inst.pause[0]
 CPU_tb.top_inst.regData1[15:0]
 CPU_tb.top_inst.regData2[15:0]
+@25
 CPU_tb.top_inst.result[15:0]
-CPU_tb.top_inst.update_seg[0]
+@28
 CPU_tb.top_inst.write_enable[2:0]
+@24
 [color] 2
 CPU_tb.top_inst.reg_inst.saved_reg[0][15:0]
 [color] 2
@@ -121,6 +127,14 @@ CPU_tb.top_inst.reg_inst.saved_reg[1][15:0]
 CPU_tb.top_inst.reg_inst.saved_reg[2][15:0]
 [color] 2
 CPU_tb.top_inst.reg_inst.saved_reg[3][15:0]
+[color] 2
+CPU_tb.top_inst.reg_inst.saved_reg[4][15:0]
+[color] 2
+CPU_tb.top_inst.reg_inst.saved_reg[5][15:0]
+[color] 2
+CPU_tb.top_inst.reg_inst.saved_reg[6][15:0]
+[color] 2
+CPU_tb.top_inst.reg_inst.saved_reg[7][15:0]
 @22
 [color] 3
 CPU_tb.top_inst.in3[3:0]

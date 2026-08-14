@@ -81,7 +81,7 @@ module decode(
         read1 = false;
         read2 = false;
         if (clear_op) begin
-            execute_mode <= NONE;
+            execute_mode = NONE;
         end else case (opcode) // execute stage
             OP_ADD, OP_SUB, OP_MUL, OP_DIV: begin
                 Data1_de = regData1;
