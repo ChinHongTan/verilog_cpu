@@ -21,7 +21,7 @@ module pipeline(
         .rst_n,
         .out(clk_main)
     );
-    //assign clk_main = clk;
+    // assign clk_main = clk;
     ALU_Pkg::ALU_Mode ALU_mode;
 
     // Registers
@@ -79,7 +79,7 @@ module pipeline(
     );
     // flags for Unsigned
     wire equ = Z;
-    wire less = N ^ V;
+    wire less = C;
     wire greater_or_equal = ~less;
 	RegData Data1_de, Data2_de;
 

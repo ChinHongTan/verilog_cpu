@@ -9,7 +9,7 @@
 ;         print(f"======{i} is a prime.=====")
 
 LOADI R0 2                          ; Start from 2 (i)
-LOADI R1 100                        ; Ends at 100
+LOADI R1 10                         ; Ends at 100
 
 START:
     LOADI R2 1                      ; is_prime = true
