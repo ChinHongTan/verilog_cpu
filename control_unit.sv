@@ -1,6 +1,6 @@
 `include "top.svh"
 
-module decode(
+module control_unit(
 	input clk,
 	input rst_n,
 	input RAM_Data command,

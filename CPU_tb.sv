@@ -8,7 +8,7 @@ module CPU_tb;
     logic [7:0] seg;
     logic [3:0] an;
 
-    pipeline top_inst(
+    top top_inst(
         .clk(clk),
         .sw(sw),
         .led(led),

@@ -1,6 +1,6 @@
 `include "top.svh"
 
-module pipeline(
+module top(
 	input clk,
     input [15:0] sw,
     output logic [15:0] led,
@@ -91,7 +91,7 @@ module pipeline(
 	RegData jump_target;
     logic clear_op;
     bool read1, read2;
-	decode decode_inst (
+	control_unit decode_inst (
 		.clk(clk_main),
 		.rst_n,
 		.command,
@@ -224,6 +224,7 @@ module pipeline(
                 end
 
                 HALT: begin
+                    pc <= pc; // don't jump
                     halt <= true;
                 end
 
