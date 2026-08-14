@@ -164,7 +164,11 @@ module top(
         end else if (!pause) begin : Decode_to_Execute
             pc <= pc + 1;
             `ifdef SIM_SPEEDUP 
-                if (!halt && (after_jump_lock == 0) && !jump_condition) step_counter <= step_counter + 1;
+                if (!halt && 
+                    (after_jump_lock == 0) && 
+                    !jump_condition &&
+                    execute_mode != HALT
+                    ) step_counter <= step_counter + 1;
             `endif
 
             // write enable signals 
