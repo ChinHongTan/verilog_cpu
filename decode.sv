@@ -12,6 +12,8 @@ module decode(
 	output RW write_enable_de,
 	output RW RAM_write_enable_de,
 	output RegData Data1_de, Data2_de,
+	output RegData jump_target_de,      // immediate target
+	output bool jump_reg,               // target is the forwarded Data1
 	output RegAddr address1, address2,
 	output RegAddr address_write_de,
     output bool read1, read2,
@@ -71,7 +73,8 @@ module decode(
     always_comb begin : decode_control
         Data1_de = 0;
         Data2_de = 0;
-        jump_condition = false;
+        jump_target_de = imm;
+        jump_reg = false;
         write_enable_de = READ;
         RAM_write_enable_de = READ;
         execute_mode = NONE;
@@ -138,17 +141,14 @@ module decode(
             // Jump and Branch
             OP_JMP: begin
                 Data1_de = imm;
-                jump_condition = true;
                 execute_mode = JUMP;
             end
-            OP_JNZ: begin //TODO forwarding
-                Data1_de = imm;
-                jump_condition = (regData1 != 0); //TODO throw into ALU
+            OP_JNZ: begin
+                Data1_de = regData1;
+                read1 = true;
                 execute_mode = JUMP;
             end
             OP_JAL: begin
-                Data1_de = imm;
-                jump_condition = true;
                 write_enable_de = WRITE;
                 execute_mode = JUMP;
 
@@ -157,28 +157,15 @@ module decode(
             OP_JMPR: begin
                 Data1_de = regData1;
                 read1 = true;
-                jump_condition = true;
+                jump_reg = true;    // target is a register, not the immediate
                 execute_mode = JUMP;
             end
 
-            OP_BEQ: begin
-                Data1_de = imm;
-                jump_condition = equ;
-                execute_mode = JUMP;
-            end
-            OP_BNE: begin
-                Data1_de = imm;
-                jump_condition = ~equ;
-                execute_mode = JUMP;
-            end 
-            OP_BLT: begin
-                Data1_de = imm;
-                jump_condition = less;
-                execute_mode = JUMP;
-            end 
-            OP_BGE: begin
-                Data1_de = imm;
-                jump_condition = greater_or_equal;
+            OP_BEQ, OP_BNE, OP_BLT, OP_BGE: begin
+                Data1_de = regData1;
+                Data2_de = regData2;
+                read1 = true;
+                read2 = true;
                 execute_mode = JUMP;
             end
             OP_HALT: begin
@@ -189,6 +176,19 @@ module decode(
             end
             default: begin
             end
+        endcase
+    end
+
+    always_comb begin : branch_condition
+        jump_condition = false;
+        if (!clear_op) case (opcode)
+            OP_JMP, OP_JAL, OP_JMPR: jump_condition = true;     // unconditional
+            OP_JNZ:                  jump_condition = ~equ;     // regData1 != 0
+            OP_BEQ:                  jump_condition = equ;
+            OP_BNE:                  jump_condition = ~equ;
+            OP_BLT:                  jump_condition = less;
+            OP_BGE:                  jump_condition = greater_or_equal;
+            default:                 jump_condition = false;
         endcase
     end
 endmodule

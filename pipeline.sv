@@ -85,6 +85,8 @@ module pipeline(
 
 	execute_mode_t execute_mode;
 	logic jump_condition;
+	RegData jump_target;
+	bool jump_reg;
     logic clear_op;
     bool read1, read2;
 	decode decode_inst (
@@ -99,6 +101,8 @@ module pipeline(
 		.write_enable_de(write_enable[0]),
 		.RAM_write_enable_de(RAM_write_enable[0]),
 		.Data1_de, .Data2_de,
+		.jump_target_de(jump_target),
+		.jump_reg,
 		.address1, .address2,
         .read1, .read2,
 		.address_write_de(address_write[0]),
@@ -219,7 +223,7 @@ module pipeline(
 
                 JUMP: begin
                     if (jump_condition) begin
-                        pc <= overflow_16to8b(Data1); // imm or RegData1
+                        pc <= overflow_16to8b((jump_reg == true) ? Data1 : jump_target);
                         after_jump_lock <= 2'b01;
                         clear_op <= true;
                         //TODO change next ir to nop
