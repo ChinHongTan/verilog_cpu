@@ -1,4 +1,5 @@
 `include "top.svh"
+`define SIM_SPEEDUP
 
 module BRAM_tb;
 	logic clk;

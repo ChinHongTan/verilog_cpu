@@ -16,12 +16,15 @@ module pipeline(
     assign pause = bool'(~updated || freeze);
 
 	logic clk_main;
-    to1Hz to1Hz_inst(
-        .clk,
-        .rst_n,
-        .out(clk_main)
-    );
-    // assign clk_main = clk;
+    `ifdef SIM_SPEEDUP 
+        assign clk_main = clk;  // Testbench / Simulation
+    `else
+        to1Hz to1Hz_inst(       // for FPGA
+            .clk   (clk),
+            .rst_n (rst_n),
+            .out   (clk_main)
+        );
+    `endif
     ALU_Pkg::ALU_Mode ALU_mode;
 
     // Registers
