@@ -23,6 +23,9 @@ module CPU_tb;
         clk = 1'b1;
         sw = 16'b1;
 
+        #8 sw[15] = 1'b1;
+        #10 sw[15] = 1'b0;
+
         #2000 $finish;
     end
 endmodule

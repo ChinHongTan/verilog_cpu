@@ -7,6 +7,7 @@ module control_unit(
 	input RegData regData1, regData2,
     input clear_op,
 	input equ, less, greater_or_equal,
+    input pause,
 
 	output bool load_de,
 	output RW write_enable_de,
@@ -32,7 +33,7 @@ module control_unit(
             address1         <= 3'b0;         // second reg
             address2         <= 3'b0;         // third reg
             imm              <= 16'b0;        // immediate value
-        end else begin
+        end else if (!pause) begin
             opcode           <= operation_t'(command[31:27]);
             address_write_de <= command[26:24];         // first reg
             address1         <= command[23:21];         // second reg
@@ -99,6 +100,14 @@ module control_unit(
                 execute_mode = CALC;
             end
 
+            OP_MOV: begin
+                Data1_de = regData1;
+                read1 = true;
+                write_enable_de = WRITE;
+                execute_mode = MOV;
+            end
+
+            // Memory
             OP_STORE: begin
                 Data1_de = regData1;
                 Data2_de = imm;		 // RAM addr
@@ -114,13 +123,7 @@ module control_unit(
 
             OP_MOV: begin
                 Data1_de = regData1;
-                read1 = true;
-                write_enable_de = WRITE;
-                execute_mode = MOV;
-            end
-
-            // Memory
-            OP_LOAD: begin
+                Data2_de = imm;		 // RAM addr
                 write_enable_de = WRITE;
                 load_de = true;
             end

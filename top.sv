@@ -10,7 +10,6 @@ module top(
     wire rst_n = sw[0];
     bool updated;
     wire freeze = sw[15];
-    bool pause;
     bool halt;
     bool jal;
     assign pause = bool'(~updated || freeze);
@@ -98,6 +97,7 @@ module top(
 		.regData1, .regData2,
         .clear_op,
 		.equ, .less, .greater_or_equal,
+        .pause,
 		
 		.load_de(load[0]),
 		.write_enable_de(write_enable[0]),
@@ -184,7 +184,19 @@ module top(
             data_in[1] <= 0;
             address_write[1] <= address_write[0];
 
-            if (halt || (after_jump_lock != 0)) begin : solve_control_hazard
+            if (pause) begin : freeze_stage
+                pc <= pc;
+                // stay the signals
+                RAM_write_enable[1] <= RAM_write_enable[1];
+                write_enable[1] <= write_enable[1];
+
+                RAM_addr <= RAM_addr;
+                RAM_in <= RAM_in;
+                load[1] <= load[1];
+
+                data_in[1] <= data_in[1];
+                address_write[1] <= address_write[1];
+            end else if (halt || (after_jump_lock != 0)) begin : solve_control_hazard
                 if (halt) pc <= pc; // don't jump
 
                 // block the signals
