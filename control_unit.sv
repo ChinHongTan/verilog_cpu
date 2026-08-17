@@ -34,7 +34,7 @@ module control_unit(
             address1         <= 3'b0;         // second reg
             address2         <= 3'b0;         // third reg
             imm              <= 16'b0;        // immediate value
-        end else if (clear_op) begin
+        end else if (clear_op | !updated) begin
             opcode           <= OP_NOP;
             address_write_de <= 3'b0;         // first reg
             address1         <= 3'b0;         // second reg
@@ -80,17 +80,16 @@ module control_unit(
     wire read_signal = (opcode == OP_LOAD || opcode == OP_LOADR);
     wire same = (RAM_addr_prev == Data2_de[7:0]);
     always_ff @(posedge clk or negedge rst_n) begin : RAM_write_stage
-        updated <= true;
+        write_prev <= false;
         if (!rst_n) begin
             RAM_addr_prev <= 0;
             write_prev    <= false;
         end else if (!pause && !clear_op) begin
             if (write_signal) begin
+                RAM_addr_prev <= regData2[7:0];
                 write_prev <= true;
             end else if (read_signal) begin
-                RAM_addr_prev <= Data2_de[7:0];
-                write_prev    <= false;
-                if (!write_prev || same) updated <= false;
+                RAM_addr_prev <= regData2[7:0];
             end
         end
     end
@@ -107,6 +106,7 @@ module control_unit(
         jal = false;
         read1 = false;
         read2 = false;
+        updated = true;
         if (!clear_op || !pause) case (opcode) // execute stage
             OP_ADD, OP_SUB, OP_MUL, OP_DIV: begin
                 Data1_de = regData1;
@@ -154,6 +154,7 @@ module control_unit(
                 write_enable_de = WRITE;
                 load_de = true;
                 execute_mode = LOAD;
+                if (write_prev || !same) updated = false;
             end
 
             OP_LOADI: begin
@@ -168,6 +169,7 @@ module control_unit(
                 write_enable_de = WRITE;
                 load_de = true;
                 execute_mode = LOAD;
+                if (write_prev || !same) updated = false;
             end
 
             // Jump and Branch

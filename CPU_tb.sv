@@ -27,6 +27,6 @@ module CPU_tb;
         #8 sw[15] = 1'b1;
         #10 sw[15] = 1'b0;
 
-        #200 $finish;
+        #2000 $finish;
     end
 endmodule
