@@ -83,6 +83,7 @@
         STORE       = 3'd3,
 		STORER      = 3'd4,
 		JUMP		= 3'd5,
+        LOAD        = 3'd6,
 		HALT        = 3'd7
 	} execute_mode_t;
 `endif

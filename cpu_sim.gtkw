@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.127 (w)1999-2026 BSI
-[*] Fri Aug 14 13:25:11 2026
+[*] Mon Aug 17 14:17:14 2026
 [*]
 [dumpfile] "wave.vcd"
-[dumpfile_mtime] "Fri Aug 14 12:56:50 2026"
-[dumpfile_size] 84534
+[dumpfile_mtime] "Mon Aug 17 14:16:40 2026"
+[dumpfile_size] 11253
 [savefile] "cpu_sim.gtkw"
-[timestart] 439640
+[timestart] 0
 [size] 1920 991
 [pos] -25 -23
-*-14.029337 482020 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-14.092377 38420 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] CPU_tb.
 [treeopen] CPU_tb.top_inst.
 [sst_width] 273
@@ -20,6 +20,9 @@
 CPU_tb.top_inst.clk
 [color] 3
 CPU_tb.top_inst.pc[7:0]
+@23
+CPU_tb.top_inst.command[31:0]
+@24
 CPU_tb.top_inst.step_counter[31:0]
 @2022
 [color] 1
@@ -47,23 +50,21 @@ CPU_tb.top_inst.address1[2:0]
 [color] 1
 ^3 tb_enum/Regaddr.txt
 CPU_tb.top_inst.address2[2:0]
-@2025
+@2024
 ^4 tb_enum/ALU_mode.txt
 CPU_tb.top_inst.ALU_mode[2:0]
 @2022
 ^5 tb_enum/exe_mode.txt
 CPU_tb.top_inst.execute_mode[2:0]
-@25
+@24
 [color] 2
 CPU_tb.top_inst.Data1[15:0]
-@24
 CPU_tb.top_inst.Data1_de[15:0]
-@25
 [color] 2
 CPU_tb.top_inst.Data2[15:0]
-@24
 CPU_tb.top_inst.Data2_de[15:0]
 CPU_tb.top_inst.jump_target[15:0]
+CPU_tb.top_inst.RAM.RAM_out[31:0]
 @c00022
 CPU_tb.top_inst.data_in[31:0]
 @28
@@ -102,21 +103,18 @@ CPU_tb.top_inst.data_in[31:0]
 @1401200
 -group_end
 @24
-CPU_tb.top_inst.equ
-CPU_tb.top_inst.execute_mode[2:0]
 CPU_tb.top_inst.freeze
-CPU_tb.top_inst.greater_or_equal
+@28
+[color] 1
+CPU_tb.top_inst.pause
+@24
 CPU_tb.top_inst.halt[0]
 CPU_tb.top_inst.jal[0]
-CPU_tb.top_inst.jump_condition
 CPU_tb.top_inst.led[15:0]
 CPU_tb.top_inst.load[1:0]
-CPU_tb.top_inst.pause[0]
-CPU_tb.top_inst.regData1[15:0]
-CPU_tb.top_inst.regData2[15:0]
-@25
 CPU_tb.top_inst.result[15:0]
 @28
+CPU_tb.top_inst.load[1:0]
 CPU_tb.top_inst.write_enable[2:0]
 @24
 [color] 2

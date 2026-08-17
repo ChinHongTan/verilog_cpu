@@ -8,11 +8,11 @@ module top(
     output [3:0] an
 );
     wire rst_n = sw[0];
-    bool updated;
+    logic updated;
     wire freeze = sw[15];
     bool halt;
     bool jal;
-    assign pause = bool'(~updated || freeze);
+    wire pause = ~updated || freeze;
 
 	logic clk_main;
     `ifdef SIM_SPEEDUP 
@@ -64,6 +64,7 @@ module top(
 
     fetch fetch_inst(
         .clk(clk_main),
+        .pause,
         .pc,
         .ir(command)
     );
@@ -110,7 +111,8 @@ module top(
         .ALU_mode,
 		.execute_mode,
 		.jump_condition,
-        .jal
+        .jal,
+        .updated
 	);
 
 	//TODO: add forwarding for load instruction
@@ -122,6 +124,7 @@ module top(
         end else if (address1 == address_write[1] && write_enable[1] == WRITE) begin 
             Data1 = data_in[1]; // execute stage
         end else if (address1 == address_write[2] && write_enable[2] == WRITE) begin 
+
             Data1 = data_in[2]; // write back stage
         end
 
@@ -158,11 +161,14 @@ module top(
             // signals for REG
             data_in[1] <= 0;
             address_write[1] <= 0;
+            load[1] <= false;
 
             halt <= false;
             after_jump_lock <= 0;
-        end else if (!pause) begin : Decode_to_Execute
-            pc <= pc + 1;
+
+            clear_op <= false;
+        end else begin
+            if (!pause) pc <= pc + 1;
             `ifdef SIM_SPEEDUP 
                 if (!halt && 
                     (after_jump_lock == 0) && 
@@ -184,20 +190,9 @@ module top(
             data_in[1] <= 0;
             address_write[1] <= address_write[0];
 
-            if (pause) begin : freeze_stage
-                pc <= pc;
-                // stay the signals
-                RAM_write_enable[1] <= RAM_write_enable[1];
-                write_enable[1] <= write_enable[1];
-
-                RAM_addr <= RAM_addr;
-                RAM_in <= RAM_in;
-                load[1] <= load[1];
-
-                data_in[1] <= data_in[1];
-                address_write[1] <= address_write[1];
-            end else if (halt || (after_jump_lock != 0)) begin : solve_control_hazard
+            if (halt || (after_jump_lock != 0)) begin : solve_control_hazard
                 if (halt) pc <= pc; // don't jump
+                else after_jump_lock <= after_jump_lock + 1;
 
                 // block the signals
                 RAM_write_enable[1] <= READ;
@@ -208,8 +203,6 @@ module top(
 
                 data_in[1] <= 0;
                 address_write[1] <= 0;
-
-				if (!halt) after_jump_lock <= after_jump_lock + 1;
             end else case (execute_mode) // execute stage
                 NONE: begin
                 end
@@ -231,12 +224,19 @@ module top(
                         in1 <= 4'((Data1 / 10) % 10);
                         in0 <= 4'(Data1 % 10);
                     end else begin 
-                        RAM_in <= {16'b0, Data2}; // imm
+                        RAM_in <= {16'b0, Data1}; // RegData1
+                        RAM_addr <= Data2[7:0];   // imm
                     end
                 end
 
                 STORER: begin 
-                    RAM_in <= {16'b0, Data2}; // RegData2
+                    RAM_in <= {16'b0, Data1}; // RegData1
+                    RAM_addr <= Data2[7:0];   // RegData2
+                end
+
+                LOAD: begin
+                    RAM_in <= {16'b0, Data1}; // RegData1
+                    RAM_addr <= Data2[7:0];   // RegData2/imm
                 end
 
                 HALT: begin
@@ -254,8 +254,6 @@ module top(
                             data_in[1] <= pc - 1; // store the next instruction address into reg
                         end
                     end
-                end
-                default: begin
                 end
             endcase
         end
@@ -282,7 +280,6 @@ module top(
         .RAM_addr,
         .RAM_in,
 		//.RAM_out,
-        .updated,
 
         // signals for registers
         .write_enable_mem(write_enable[1]),
@@ -292,19 +289,20 @@ module top(
         .data_in_mem(data_in[1]),
         .data_in_wb(data_in[2]),
 
-        .load(load[1]), // Whether the data_in is from mem (LOAD/LOADR)
-        .pause(freeze)  // !! Don't let RAM pause itself
+        .load(load[1]) // Whether the data_in is from mem (LOAD/LOADR)
     );
 endmodule
 
 module fetch (
     input logic clk,
+    input logic pause,
     input RAM_Address pc,
 
     output logic [31:0] ir
 );
     BRAM Instruction(
         .clk,
+        .pause,
         .write(READ),   // 0:read 1:write
         .address(pc),   // address
         .in(32'b0),     // value to store
@@ -318,7 +316,6 @@ module memory(
     input RAM_Address RAM_addr,
     input RAM_Data RAM_in,
     input RW RAM_write_enable,
-    output bool updated,
 
     // signals for registers
     input RW write_enable_mem,
@@ -328,33 +325,32 @@ module memory(
     input RegData data_in_mem,
     output RegData data_in_wb,
 
-    input bool load, // Whether the data_in is from mem (LOAD/LOADR)
-    input pause
+    input bool load // Whether the data_in is from mem (LOAD/LOADR)
 );
     RAM_Data RAM_out;
-    RAM_Address RAM_addr_prev;
+    bool load_t; // 1 clk delay for load instruction
+    RegData passed_data;
+    always_comb begin
+        if (load_t == true) begin
+            data_in_wb = RAM_out[15:0]; // immediate after RAM output
+        end else begin
+            data_in_wb = passed_data;
+        end
+    end
+
     always_ff @(posedge clk, negedge rst_n) begin
         if (!rst_n) begin 
-            updated <= false;
-            RAM_addr_prev <= 0;
             write_enable_wb <= READ;
             address_write_wb <= 0;
-            data_in_wb <= 0;
-        end else if (pause) begin
-            // do nothing
-        end else if (RAM_write_enable == READ && RAM_addr_prev != RAM_addr) begin
-            updated <= false;
-            RAM_addr_prev <= RAM_addr;
         end else begin : normal_run
-            updated <= true;
-
             address_write_wb <= address_write_mem;
             if (load == true) begin
                 write_enable_wb <= WRITE;
-                data_in_wb <= RAM_out[15:0];
+                load_t <= true;
             end else begin : simply_pass_data
                 write_enable_wb <= write_enable_mem;
-                data_in_wb <= data_in_mem;
+                passed_data <= data_in_mem;
+                load_t <= false;
             end
         end
     end

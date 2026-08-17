@@ -2,6 +2,7 @@
 
 module BRAM (
     input clk,
+    input pause,
 	input RW write, // 0:read 1:write
 	input RAM_Address address,
 	input RAM_Data in,
@@ -21,6 +22,8 @@ module BRAM (
 		if (write) begin
 			bram[address] <= in;    // write operation
 		end
-		out <= bram[address];       // synchronous read
+		if (!pause) begin
+            out <= bram[address];       // synchronous read
+        end
 	end
 endmodule

@@ -20,7 +20,8 @@ module control_unit(
     output ALU_Pkg::ALU_Mode ALU_mode,
 	output execute_mode_t execute_mode,
 	output logic jump_condition,
-    output bool jal
+    output bool jal,
+    output logic updated
 );
 	operation_t opcode;
     RegData imm;
@@ -33,15 +34,18 @@ module control_unit(
             address1         <= 3'b0;         // second reg
             address2         <= 3'b0;         // third reg
             imm              <= 16'b0;        // immediate value
-        end else if (!pause) begin
+        end else if (clear_op) begin
+            opcode           <= OP_NOP;
+            address_write_de <= 3'b0;         // first reg
+            address1         <= 3'b0;         // second reg
+            address2         <= 3'b0;         // third reg
+            imm              <= 16'b0;        // immediate value
+        end else begin
             opcode           <= operation_t'(command[31:27]);
             address_write_de <= command[26:24];         // first reg
             address1         <= command[23:21];         // second reg
             address2         <= command[20:18];         // third reg
             imm              <= command[17:2];          // immediate value
-            if (clear_op) begin
-                opcode           <= OP_NOP;
-            end
         end
     end
 
@@ -69,6 +73,28 @@ module control_unit(
         endcase
     end
 
+    RAM_Address RAM_addr_prev;
+    bool write_prev;
+
+    wire write_signal = (opcode == OP_STORE || opcode == OP_STORER);
+    wire read_signal = (opcode == OP_LOAD || opcode == OP_LOADR);
+    wire same = (RAM_addr_prev == Data2_de[7:0]);
+    always_ff @(posedge clk or negedge rst_n) begin : RAM_write_stage
+        updated <= true;
+        if (!rst_n) begin
+            RAM_addr_prev <= 0;
+            write_prev    <= false;
+        end else if (!pause && !clear_op) begin
+            if (write_signal) begin
+                write_prev <= true;
+            end else if (read_signal) begin
+                RAM_addr_prev <= Data2_de[7:0];
+                write_prev    <= false;
+                if (!write_prev || same) updated <= false;
+            end
+        end
+    end
+
 	// MARK: Decode stage
     always_comb begin : decode_control
         Data1_de = 0;
@@ -81,9 +107,7 @@ module control_unit(
         jal = false;
         read1 = false;
         read2 = false;
-        if (clear_op) begin
-            execute_mode = NONE;
-        end else case (opcode) // execute stage
+        if (!clear_op || !pause) case (opcode) // execute stage
             OP_ADD, OP_SUB, OP_MUL, OP_DIV: begin
                 Data1_de = regData1;
                 Data2_de = regData2;
@@ -117,15 +141,19 @@ module control_unit(
             end
 
             OP_STORER: begin 
+                Data1_de = regData1;
+                Data2_de = regData2; // RAM addr
+                read1 = true;
                 RAM_write_enable_de = WRITE;
                 execute_mode = STORER;
             end
 
-            OP_MOV: begin
+            OP_LOAD: begin
                 Data1_de = regData1;
                 Data2_de = imm;		 // RAM addr
                 write_enable_de = WRITE;
                 load_de = true;
+                execute_mode = LOAD;
             end
 
             OP_LOADI: begin
@@ -135,8 +163,11 @@ module control_unit(
             end
 
             OP_LOADR: begin // LOADR R0 R1 ; R0 = BRAM[R1]
+                Data1_de = regData1;
+                Data2_de = regData2; // RAM addr
                 write_enable_de = WRITE;
                 load_de = true;
+                execute_mode = LOAD;
             end
 
             // Jump and Branch
