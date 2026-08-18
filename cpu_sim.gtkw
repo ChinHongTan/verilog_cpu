@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.127 (w)1999-2026 BSI
-[*] Mon Aug 17 14:17:14 2026
+[*] Tue Aug 18 07:06:28 2026
 [*]
 [dumpfile] "wave.vcd"
-[dumpfile_mtime] "Mon Aug 17 14:16:40 2026"
-[dumpfile_size] 11253
+[dumpfile_mtime] "Tue Aug 18 07:06:22 2026"
+[dumpfile_size] 74119
 [savefile] "cpu_sim.gtkw"
 [timestart] 0
 [size] 1920 991
-[pos] -25 -23
-*-14.092377 38420 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[pos] -1 -1
+*-18.292377 1775000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] CPU_tb.
 [treeopen] CPU_tb.top_inst.
 [sst_width] 273
@@ -20,7 +20,7 @@
 CPU_tb.top_inst.clk
 [color] 3
 CPU_tb.top_inst.pc[7:0]
-@23
+@22
 CPU_tb.top_inst.command[31:0]
 @24
 CPU_tb.top_inst.step_counter[31:0]
@@ -102,8 +102,8 @@ CPU_tb.top_inst.data_in[31:0]
 (31)CPU_tb.top_inst.data_in[31:0]
 @1401200
 -group_end
-@24
-CPU_tb.top_inst.freeze
+@29
+CPU_tb.top_inst.updated
 @28
 [color] 1
 CPU_tb.top_inst.pause

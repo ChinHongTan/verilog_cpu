@@ -17,7 +17,7 @@ module top(
 	logic clk_main;
     `ifdef SIM_SPEEDUP 
         assign clk_main = clk;  // Testbench / Simulation
-        int step_counter = -2; //TODO step_counter
+        int step_counter = -2;
     `else
         to1Hz to1Hz_inst(       // for FPGA
             .clk   (clk),
@@ -98,7 +98,7 @@ module top(
 		.regData1, .regData2,
         .clear_op,
 		.equ, .less, .greater_or_equal,
-        .pause,
+        .pause(freeze),
 		
 		.load_de(load[0]),
 		.write_enable_de(write_enable[0]),
@@ -115,7 +115,6 @@ module top(
         .updated
 	);
 
-	//TODO: add forwarding for load instruction
 	always_comb begin : forwarding_multiplexer //MARK: Forwarding
         Data1 = Data1_de;
         Data2 = Data2_de;
@@ -165,8 +164,6 @@ module top(
 
             halt <= false;
             after_jump_lock <= 0;
-
-            clear_op <= false;
         end else begin
             if (!pause) pc <= pc + 1;
             `ifdef SIM_SPEEDUP 
@@ -219,10 +216,10 @@ module top(
                     if (Data2 >= 16'd65_500) begin : update_display //TODO throw into ALU
                         RAM_write_enable[1] <= READ;
 
-                        in3 <= 4'((Data1 / 1000) % 10);
-                        in2 <= 4'((Data1 / 100) % 10);
-                        in1 <= 4'((Data1 / 10) % 10);
-                        in0 <= 4'(Data1 % 10);
+                        in3 <= 4'(32'(Data1 / 1000) % 10);
+                        in2 <= 4'(32'(Data1 / 100) % 10);
+                        in1 <= 4'(32'(Data1 / 10) % 10);
+                        in0 <= 4'(32'(Data1 % 10));
                     end else begin 
                         RAM_in <= {16'b0, Data1}; // RegData1
                         RAM_addr <= Data2[7:0];   // imm
@@ -247,9 +244,8 @@ module top(
                 JUMP: begin
                     if (jump_condition) begin
                         pc <= overflow_16to8b(jump_target);
-                        after_jump_lock <= 2'b01;
+                        after_jump_lock <= 1;
                         clear_op <= true;
-                        //TODO change next ir to nop
                         if (jal) begin
                             data_in[1] <= pc - 1; // store the next instruction address into reg
                         end
@@ -357,6 +353,7 @@ module memory(
     // Data
     BRAM RAM(
         .clk,
+        .pause(1'b0),
         .write(RAM_write_enable), 
         .address(RAM_addr),
         .in(RAM_in),

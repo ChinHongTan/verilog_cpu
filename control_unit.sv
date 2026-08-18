@@ -106,7 +106,6 @@ module control_unit(
         jal = false;
         read1 = false;
         read2 = false;
-        updated = true;
         if (!clear_op || !pause) case (opcode) // execute stage
             OP_ADD, OP_SUB, OP_MUL, OP_DIV: begin
                 Data1_de = regData1;
@@ -154,7 +153,6 @@ module control_unit(
                 write_enable_de = WRITE;
                 load_de = true;
                 execute_mode = LOAD;
-                if (write_prev || !same) updated = false;
             end
 
             OP_LOADI: begin
@@ -169,7 +167,6 @@ module control_unit(
                 write_enable_de = WRITE;
                 load_de = true;
                 execute_mode = LOAD;
-                if (write_prev || !same) updated = false;
             end
 
             // Jump and Branch
@@ -217,14 +214,16 @@ module control_unit(
 
     always_comb begin : branch_condition
         jump_condition = false;
+        updated = true;
         if (!clear_op) case (opcode)
-            OP_JMP, OP_JAL, OP_JMPR: jump_condition = true;     // unconditional
-            OP_JNZ:                  jump_condition = ~equ;     // regData1 != 0
-            OP_BEQ:                  jump_condition = equ;
-            OP_BNE:                  jump_condition = ~equ;
-            OP_BLT:                  jump_condition = less;
-            OP_BGE:                  jump_condition = greater_or_equal;
-            default:                 jump_condition = false;
+            OP_JMP, OP_JAL, OP_JMPR: begin jump_condition = true;   updated = ~jump_condition; end     // unconditional
+            OP_JNZ:                  begin jump_condition = ~equ;   updated = ~jump_condition; end     // regData1 != 0
+            OP_BEQ:                  begin jump_condition = equ;    updated = ~jump_condition; end
+            OP_BNE:                  begin jump_condition = ~equ;   updated = ~jump_condition; end
+            OP_BLT:                  begin jump_condition = less;   updated = ~jump_condition; end
+            OP_BGE:                  begin jump_condition = greater_or_equal; updated = ~jump_condition; end
+            OP_LOAD, OP_LOADR:       begin if (write_prev || !same) updated = false; end
+            default:                 begin jump_condition = false;  updated = ~jump_condition; end
         endcase
     end
 endmodule

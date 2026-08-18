@@ -14,5 +14,6 @@ LABEL:
     SUB R3 R3 R4    ; decrement 1
     STORE R2 65500  ; print to display
     JNZ R3 LABEL    ; Jump back to Label
+    ;LOAD R7 100    ; To test the load instruction
 
 HALT            ; --
