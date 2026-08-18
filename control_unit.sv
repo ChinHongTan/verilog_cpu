@@ -67,6 +67,30 @@ module control_unit(
                 ALU_mode = ALU_Pkg::DIV;
             end
 
+            OP_AND: begin
+                ALU_mode = ALU_Pkg::AND;
+            end
+
+            OP_OR: begin
+                ALU_mode = ALU_Pkg::OR;
+            end
+
+            OP_XOR: begin
+                ALU_mode = ALU_Pkg::XOR;
+            end
+
+            OP_NOT: begin
+                ALU_mode = ALU_Pkg::NOT;
+            end
+
+            OP_SHL: begin
+                ALU_mode = ALU_Pkg::SHL;
+            end
+
+            OP_SHR: begin
+                ALU_mode = ALU_Pkg::SHR;
+            end
+
             default: begin : comparing_signal
                 ALU_mode = ALU_Pkg::SUB;
             end

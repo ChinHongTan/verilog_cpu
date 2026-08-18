@@ -26,6 +26,24 @@ module ALU
                 out_comb = (data2 == 0) ? 16'hFFFF : data1 / data2; //TODO ZNCV
                 V = (data2 == 0); // whether the result is thrustworthy
             end
+            AND: begin
+                out_comb = data1 & data2;
+            end
+            OR: begin
+                out_comb = data1 | data2;
+            end
+            XOR: begin
+                out_comb = data1 ^ data2;
+            end
+            NOT: begin
+                out_comb = ~data1;
+            end
+            SHL: begin
+                out_comb = data1 << data2;
+            end
+            SHR: begin
+                out_comb = data1 >> data2;
+            end
             default: {C, out_comb} = data1 - data2;
         endcase
     end
@@ -34,12 +52,4 @@ module ALU
     assign Z = (result == 16'b0);
     assign N = result[15];
 
-    // TODO not supported now
-    //always_ff @(posedge clk, negedge rst_n) begin : div
-    //    if (!rst_n) begin
-    //        out_seq <= 16'b0;
-    //    end else if (mode == DIV) begin
-    //        out_seq <= data1 / data2;
-    //    end
-    //end
 endmodule

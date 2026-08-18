@@ -8,7 +8,7 @@ module to1Hz(
         if (!rst_n) begin
             count <= 0;
             out <= 0;
-        end else if (count >= 999_999) begin
+        end else if (count >= 4_999_999) begin
             count <= 0;
             out <= ~out;
         end else begin

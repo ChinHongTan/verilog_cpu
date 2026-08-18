@@ -10,7 +10,7 @@ import sys
 from enum import IntEnum
 from typing import Literal
 
-DEFAULTFILENAME = "program1.txt"
+DEFAULTFILENAME = "program.txt"
 filename = sys.argv[1] if len(sys.argv) > 1 else DEFAULTFILENAME
 
 class Opcode(IntEnum):
@@ -21,21 +21,27 @@ class Opcode(IntEnum):
     DIV    = 4
     ADDI   = 5
     SUBI   = 6
-    MOV    = 7
-    LOAD   = 8
-    LOADI  = 9       # Save to register with an immediate number, e.g. LOADI R0 2
-    LOADR  = 10
-    STORE  = 11       # Save to RAM
-    STORER = 12
-    JMP    = 13
-    JNZ    = 14      # Jump if the register is zero, e.g. JZ R3 ADD_SECTION
-    JAL	   = 15
-    JMPR   = 16
-    BEQ    = 17
-    BNE    = 18
-    BLT    = 19
-    BGE    = 20
-    HALT   = 21
+    AND    = 7
+    OR     = 8
+    XOR    = 9
+    NOT    = 10
+    SHL    = 11
+    SHR    = 12
+    MOV    = 13
+    LOAD   = 14
+    LOADI  = 15       # Save to register with an immediate number, e.g. LOADI R0 2
+    LOADR  = 16
+    STORE  = 17       # Save to RAM
+    STORER = 18
+    JMP    = 19
+    JNZ    = 20      # Jump if the register is zero, e.g. JZ R3 ADD_SECTION
+    JAL	   = 21
+    JMPR   = 22
+    BEQ    = 23
+    BNE    = 24
+    BLT    = 25
+    BGE    = 26
+    HALT   = 27
     
 class Register(IntEnum):
     R0 = 0
@@ -57,6 +63,12 @@ INSTRUCTION_FORMATS: dict[str, list[tuple[DataType, int]]] = {
     "DIV":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [DIV rd rs1 rs2]
     "ADDI":     [("RD", 3), ("RS1", 3), ("IMM", 16)],       # [ADDI rd rs1 imm]
     "SUBI":     [("RD", 3), ("RS1", 3), ("IMM", 16)],       # [SUBI rd rs1 imm]
+    "AND":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [AND rd rs1 rs2]
+    "OR":       [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [OR rd rs1 rs2]
+    "XOR":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [XOR rd rs1 rs2]
+    "NOT":      [("RD", 3), ("RS1", 3)],                    # [NOT rd rs1]
+    "SHL":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [SHL rd rs1 rs2]
+    "SHR":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [SHR rd rs1 rs2]
     "MOV":      [("RD", 3), ("RS1", 3)],                    # [MOV rd rs1]
     "LOAD":     [("RD", 3), ("BRAM", 16)],                  # [LOAD rd bram]
     "LOADI":    [("RD", 3), ("IMM", 16)],                   # [LOADI rd imm]

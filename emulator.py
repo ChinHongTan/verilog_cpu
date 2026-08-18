@@ -8,21 +8,27 @@ opcode_map: dict[int, str] = {
     4:  "DIV",
     5:  "ADDI",
     6:  "SUBI",
-    7:  "MOV",
-    8:  "LOAD",
-    9:  "LOADI", 
-    10: "LOADR", 
-    11: "STORE", 
-    12: "STORER",
-    13: "JMP",
-    14: "JNZ",
-    15: "JAL",	  
-    16: "JMPR",  
-    17: "BEQ",
-    18: "BNE",
-    19: "BLT",
-    20: "BGE",
-    21: "HALT"
+    7:  "AND",
+    8:  "OR",
+    9:  "XOR",
+    10: "NOT",
+    11: "SHL",
+    12: "SHR",
+    13:  "MOV",
+    14:  "LOAD",
+    15:  "LOADI", 
+    16: "LOADR", 
+    17: "STORE", 
+    18: "STORER",
+    19: "JMP",
+    20: "JNZ",
+    21: "JAL",	  
+    22: "JMPR",  
+    23: "BEQ",
+    24: "BNE",
+    25: "BLT",
+    26: "BGE",
+    27: "HALT"
 }
 
 type DataType = Literal["RD", "RS1", "RS2", "IMM", "BRAM", "LABEL"]
@@ -35,6 +41,12 @@ INSTRUCTION_FORMATS: dict[str, list[tuple[DataType, int]]] = {
     "DIV":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [DIV rd rs1 rs2]
     "ADDI":     [("RD", 3), ("RS1", 3), ("IMM", 16)],       # [ADDI rd rs1 imm]
     "SUBI":     [("RD", 3), ("RS1", 3), ("IMM", 16)],       # [SUBI rd rs1 imm]
+    "AND":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [AND rd rs1 rs2]
+    "OR":       [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [OR rd rs1 rs2]
+    "XOR":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [XOR rd rs1 rs2]
+    "NOT":      [("RD", 3), ("RS1", 3)],                    # [NOT rd rs1]
+    "SHL":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [SHL rd rs1 rs2]
+    "SHR":      [("RD", 3), ("RS1", 3), ("RS2", 3)],        # [SHR rd rs1 rs2]
     "MOV":      [("RD", 3), ("RS1", 3)],                    # [MOV rd rs1]
     "LOAD":     [("RD", 3), ("BRAM", 16)],                  # [LOAD rd bram]
     "LOADI":    [("RD", 3), ("IMM", 16)],                   # [LOADI rd imm]
@@ -245,6 +257,30 @@ while True:
             result = reg[args[1]] - args[2]
             if result < 0:
                 note = f"  <-- underflow, {result} wraps to {result & 65535}"
+            reg[args[0]] = result & 65535
+
+        case "AND":
+            result = reg[args[1]] & reg[args[2]]
+            reg[args[0]] = result & 65535
+
+        case "OR":
+            result = reg[args[1]] | reg[args[2]]
+            reg[args[0]] = result & 65535
+
+        case "XOR":
+            result = reg[args[1]] ^ reg[args[2]]
+            reg[args[0]] = result & 65535
+
+        case "NOT":
+            result = ~reg[args[1]]
+            reg[args[0]] = result & 65535
+
+        case "SHL":
+            result = reg[args[1]] << reg[args[2]]
+            reg[args[0]] = result & 65535
+
+        case "SHR":
+            result = reg[args[1]] >> reg[args[2]]
             reg[args[0]] = result & 65535
             
         case "MOV":

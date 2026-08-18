@@ -36,21 +36,27 @@
         OP_DIV    = 5'd4,
 		OP_ADDI   = 5'd5,
 		OP_SUBI   = 5'd6,
-        OP_MOV    = 5'd7,
-        OP_LOAD   = 5'd8,       // Save to register with an immediate number, e.g. LOADI R0 2
-        OP_LOADI  = 5'd9,
-        OP_LOADR  = 5'd10,       // Save to RAM
-        OP_STORE  = 5'd11,
-		OP_STORER = 5'd12,
-        OP_JMP    = 5'd13,      // Jump if the register is zero, e.g. JZ R3 ADD_SECTION
-        OP_JNZ    = 5'd14,
-        OP_JAL 	  = 5'd15,
-        OP_JMPR   = 5'd16,
-		OP_BEQ    = 5'd17,
-		OP_BNE    = 5'd18,
-		OP_BLT    = 5'd19,
-		OP_BGE    = 5'd20,
-        OP_HALT   = 5'd21
+        OP_AND    = 5'd7,
+        OP_OR     = 5'd8,
+        OP_XOR    = 5'd9,
+        OP_NOT    = 5'd10,
+        OP_SHL    = 5'd11,
+        OP_SHR    = 5'd12,
+        OP_MOV    = 5'd13,
+        OP_LOAD   = 5'd14,
+        OP_LOADI  = 5'd15,       // Save to register with an immediate number, e.g. LOADI R0 2
+        OP_LOADR  = 5'd16,
+        OP_STORE  = 5'd17,       // Save to RAM
+        OP_STORER = 5'd18,
+        OP_JMP    = 5'd19,
+        OP_JNZ    = 5'd20,       // Jump if the register is zero, e.g. JZ R3 ADD_SECTION
+        OP_JAL	  = 5'd21,
+        OP_JMPR   = 5'd22,
+        OP_BEQ    = 5'd23,
+        OP_BNE    = 5'd24,
+        OP_BLT    = 5'd25,
+        OP_BGE    = 5'd26,
+        OP_HALT   = 5'd27
 	} operation_t;
 
     typedef enum logic [2:0] {
