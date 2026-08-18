@@ -15,7 +15,7 @@ module top(
     wire pause = ~updated || freeze;
 
 	logic clk_main;
-    `ifdef SIM_SPEEDUP 
+    `ifdef SIM_SPEEDUP
         assign clk_main = clk;  // Testbench / Simulation
         int step_counter = -2;
     `else
@@ -62,16 +62,18 @@ module top(
         .data_in(data_in[2])
     );
 
-    fetch fetch_inst(
-        .clk(clk_main),
+    BRAM fetch( // Instruction
+        .clk,
         .pause,
-        .pc,
-        .ir(command)
+        .write(READ),
+        .address(pc),
+        .in(32'b0),
+        .out(command)
     );
 
     // MARK: ALU
     logic Z, N, C, V;
-    
+
     RegData Data1, Data2;
     ALU alu_inst (
         .data1(Data1),
@@ -99,7 +101,7 @@ module top(
         .clear_op,
 		.equ, .less, .greater_or_equal,
         .pause(freeze),
-		
+
 		.load_de(load[0]),
 		.write_enable_de(write_enable[0]),
 		.RAM_write_enable_de(RAM_write_enable[0]),
@@ -120,19 +122,19 @@ module top(
         Data2 = Data2_de;
         if (!read1) begin
             Data1 = Data1_de;
-        end else if (address1 == address_write[1] && write_enable[1] == WRITE) begin 
+        end else if (address1 == address_write[1] && write_enable[1] == WRITE) begin
             Data1 = data_in[1]; // execute stage
-        end else if (address1 == address_write[2] && write_enable[2] == WRITE) begin 
+        end else if (address1 == address_write[2] && write_enable[2] == WRITE) begin
 
             Data1 = data_in[2]; // write back stage
         end
 
         if (!read2) begin
             Data2 = Data2_de;
-        end else if (address2 == address_write[1] && write_enable[1] == WRITE) begin 
-            Data2 = data_in[1]; 
-        end else if (address2 == address_write[2] && write_enable[2] == WRITE) begin 
-            Data2 = data_in[2]; 
+        end else if (address2 == address_write[1] && write_enable[1] == WRITE) begin
+            Data2 = data_in[1];
+        end else if (address2 == address_write[2] && write_enable[2] == WRITE) begin
+            Data2 = data_in[2];
         end
     end
 
@@ -149,7 +151,7 @@ module top(
             in1 <= 4'b0;
             in0 <= 4'b0;
 
-            // write enable signals 
+            // write enable signals
             RAM_write_enable[1] <= READ;
             write_enable[1] <= READ;
 
@@ -166,15 +168,15 @@ module top(
             after_jump_lock <= 0;
         end else begin
             if (!pause) pc <= pc + 1;
-            `ifdef SIM_SPEEDUP 
-                if (!halt && 
-                    (after_jump_lock == 0) && 
+            `ifdef SIM_SPEEDUP
+                if (!halt &&
+                    (after_jump_lock == 0) &&
                     !jump_condition &&
                     execute_mode != HALT
                     ) step_counter <= step_counter + 1;
             `endif
 
-            // write enable signals 
+            // write enable signals
             RAM_write_enable[1] <= RAM_write_enable[0];
             write_enable[1] <= write_enable[0];
 
@@ -207,7 +209,7 @@ module top(
                 CALC: begin
                     data_in[1] <= result;
                 end
-                
+
                 MOV: begin
                     data_in[1] <= Data1; // RegData1
                 end
@@ -220,13 +222,13 @@ module top(
                         in2 <= 4'(32'(Data1 / 100) % 10);
                         in1 <= 4'(32'(Data1 / 10) % 10);
                         in0 <= 4'(32'(Data1 % 10));
-                    end else begin 
+                    end else begin
                         RAM_in <= {16'b0, Data1}; // RegData1
                         RAM_addr <= Data2[7:0];   // imm
                     end
                 end
 
-                STORER: begin 
+                STORER: begin
                     RAM_in <= {16'b0, Data1}; // RegData1
                     RAM_addr <= Data2[7:0];   // RegData2
                 end
@@ -255,7 +257,6 @@ module top(
         end
     end
 
-    
     seg_four seg_four_inst(
         .clk,
         .rst_n,
@@ -272,91 +273,19 @@ module top(
     memory RAM( // 2 stages delay
         .clk(clk_main),
         .rst_n,
-        .RAM_write_enable(RAM_write_enable[1]), 
+        .RAM_write_enable(RAM_write_enable[1]),
         .RAM_addr,
         .RAM_in,
 		//.RAM_out,
 
         // signals for registers
         .write_enable_mem(write_enable[1]),
-        .write_enable_wb(write_enable[2]), 
+        .write_enable_wb(write_enable[2]),
         .address_write_mem(address_write[1]),
         .address_write_wb(address_write[2]),
         .data_in_mem(data_in[1]),
         .data_in_wb(data_in[2]),
 
         .load(load[1]) // Whether the data_in is from mem (LOAD/LOADR)
-    );
-endmodule
-
-module fetch (
-    input logic clk,
-    input logic pause,
-    input RAM_Address pc,
-
-    output logic [31:0] ir
-);
-    BRAM Instruction(
-        .clk,
-        .pause,
-        .write(READ),   // 0:read 1:write
-        .address(pc),   // address
-        .in(32'b0),     // value to store
-        .out(ir)        // value to read
-    );
-endmodule
-
-module memory(
-    input logic clk,
-    input logic rst_n,
-    input RAM_Address RAM_addr,
-    input RAM_Data RAM_in,
-    input RW RAM_write_enable,
-
-    // signals for registers
-    input RW write_enable_mem,
-    output RW write_enable_wb, 
-    input RegAddr address_write_mem,
-    output RegAddr address_write_wb,
-    input RegData data_in_mem,
-    output RegData data_in_wb,
-
-    input bool load // Whether the data_in is from mem (LOAD/LOADR)
-);
-    RAM_Data RAM_out;
-    bool load_t; // 1 clk delay for load instruction
-    RegData passed_data;
-    always_comb begin
-        if (load_t == true) begin
-            data_in_wb = RAM_out[15:0]; // immediate after RAM output
-        end else begin
-            data_in_wb = passed_data;
-        end
-    end
-
-    always_ff @(posedge clk, negedge rst_n) begin
-        if (!rst_n) begin 
-            write_enable_wb <= READ;
-            address_write_wb <= 0;
-        end else begin : normal_run
-            address_write_wb <= address_write_mem;
-            if (load == true) begin
-                write_enable_wb <= WRITE;
-                load_t <= true;
-            end else begin : simply_pass_data
-                write_enable_wb <= write_enable_mem;
-                passed_data <= data_in_mem;
-                load_t <= false;
-            end
-        end
-    end
-    // Data
-    BRAM RAM(
-        .clk,
-        .pause(1'b0),
-        .write(RAM_write_enable), 
-        .address(RAM_addr),
-        .in(RAM_in),
-        .out(RAM_out)
     );
 endmodule

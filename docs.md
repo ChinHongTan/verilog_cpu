@@ -65,7 +65,7 @@ JMPR:                   [op - 5][empty - 3][rs1   - 3][empty - 3][empty    - 16]
 MOV:                    [op - 5][rd    - 3][rs1   - 3][empty - 3][empty    - 16]
 LOADR:                  [op - 5][rd    - 3][rs1   - 3][empty - 3][empty    - 16]
 
-### branch if 
+### branch if
 BEQ -                   [op - 5][empty - 3][rs1   - 3][rs2   - 3][BRAM adr - 16]
 BNE -                   [op - 5][empty - 3][rs1   - 3][rs2   - 3][BRAM adr - 16]
 BLT -                   [op - 5][empty - 3][rs1   - 3][rs2   - 3][BRAM adr - 16]

@@ -5,11 +5,13 @@ module BRAM_tb;
 	logic clk;
 	RW write;
 	logic [7:0] address;
+    logic pause;
 
 	RAM_Data in, out;
 
 	BRAM BRAM_inst (
 		.clk,
+        .pause,
 		.write, // 0:read 1:write
 		.address,
 		.in,
@@ -20,6 +22,7 @@ module BRAM_tb;
 
 	initial begin
 		write = READ;
+        pause = 1'b0;
 		address = 0; #10;
 		$display("Address=0 Data=%h", out); // Reads initial value 0x00
 
@@ -27,8 +30,8 @@ module BRAM_tb;
 		$display("Address=1 Data=%h", out); // Reads initial value 0x01
 
 		// Write to memory
-			write = WRITE; address = 2; in = 32'h0055; 
-		#10 write = READ;  address = 2; 
+			write = WRITE; address = 2; in = 32'h0055;
+		#10 write = READ;  address = 2;
 		#10 $display("Address=2 Data(after write)=%h", out); // Reads 0x55
 
 

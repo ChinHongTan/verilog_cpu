@@ -18,8 +18,8 @@ module CPU_tb;
     always #5 clk <= ~clk;
 
     initial begin
-        $dumpfile("wave.vcd"); 
-        $dumpvars(1, CPU_tb);   
+        $dumpfile("wave.vcd");
+        $dumpvars(1, CPU_tb);
         clk = 1'b1;
         sw = 16'b0;
         #5 sw = 16'b1;

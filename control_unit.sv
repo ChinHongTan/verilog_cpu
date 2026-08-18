@@ -66,7 +66,7 @@ module control_unit(
             OP_DIV: begin
                 ALU_mode = ALU_Pkg::DIV;
             end
-            
+
             default: begin : comparing_signal
                 ALU_mode = ALU_Pkg::SUB;
             end
@@ -139,7 +139,7 @@ module control_unit(
                 execute_mode = STORE;
             end
 
-            OP_STORER: begin 
+            OP_STORER: begin
                 Data1_de = regData1;
                 Data2_de = regData2; // RAM addr
                 read1 = true;
@@ -222,7 +222,7 @@ module control_unit(
             OP_BNE:                  begin jump_condition = ~equ;   updated = ~jump_condition; end
             OP_BLT:                  begin jump_condition = less;   updated = ~jump_condition; end
             OP_BGE:                  begin jump_condition = greater_or_equal; updated = ~jump_condition; end
-            OP_LOAD, OP_LOADR:       begin if (write_prev || !same) updated = false; end
+            OP_LOAD, OP_LOADR:       begin if (write_prev || !same) updated = false;           end
             default:                 begin jump_condition = false;  updated = ~jump_condition; end
         endcase
     end
