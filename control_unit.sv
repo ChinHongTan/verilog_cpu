@@ -131,7 +131,7 @@ module control_unit(
         read1 = false;
         read2 = false;
         if (!clear_op || !pause) case (opcode) // execute stage
-            OP_ADD, OP_SUB, OP_MUL, OP_DIV: begin
+            OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_AND, OP_OR, OP_XOR, OP_SHL, OP_SHR: begin
                 Data1_de = regData1;
                 Data2_de = regData2;
                 read1 = true;
@@ -142,6 +142,12 @@ module control_unit(
             OP_ADDI, OP_SUBI: begin
                 Data1_de = regData1;
                 Data2_de = imm;
+                read1 = true;
+                write_enable_de = WRITE;
+                execute_mode = CALC;
+            end
+            OP_NOT: begin
+                Data1_de = regData1;
                 read1 = true;
                 write_enable_de = WRITE;
                 execute_mode = CALC;
