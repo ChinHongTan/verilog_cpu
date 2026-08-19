@@ -1,4 +1,16 @@
 - linux
-verilator --binary --trace -Wall --timing -Wno-fatal CPU_tb.sv top.sv; make -C obj_dir -f VCPU_tb.mk &&  ./obj_dir/VCPU_tb; gtkwave wave.vcd cpu_sim.gtkw
+verilator --binary --trace -Wall --timing -Wno-fatal CPU_tb.sv top.sv && ./obj_dir/VCPU_tb && python3 strip_top.py wave.vcd && gtkwave wave.vcd cpu_sim.gtkw
+
 - mac
-verilator --binary --trace -Wall --timing -Wno-fatal CPU_tb.sv top.sv && ./obj_dir/VCPU_tb && surfer wave.vcd cpu_sim.gtkw
+verilator --binary --trace -Wall --timing -Wno-fatal CPU_tb.sv top.sv && ./obj_dir/VCPU_tb && python3 strip_top.py wave.vcd && surfer wave.vcd cpu_sim.gtkw
+
+Notes:
+* strip_top.py removes Verilator's synthetic `TOP` wrapper scope from the VCD.
+  Without it signals are TOP.CPU_tb.top_inst.*, cpu_sim.gtkw expects
+  CPU_tb.top_inst.*, and GTKWave silently shows an empty signal pane.
+  It is idempotent, so re-running it is harmless.
+* --trace always emits VCD regardless of the $dumpfile name. Renaming the
+  output to .fst does NOT make it FST; GTKWave picks its loader by extension
+  and reports "could not initialize". Real FST needs --trace-fst, which needs
+  `sudo apt install zlib1g-dev` (Verilator's FST writer links zlib).
+* `make -C obj_dir -f VCPU_tb.mk` is unnecessary; --binary already builds.

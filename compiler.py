@@ -10,7 +10,7 @@ import sys
 from enum import IntEnum
 from typing import Literal
 
-DEFAULTFILENAME = "program.txt"
+DEFAULTFILENAME = "program2.txt"
 filename = sys.argv[1] if len(sys.argv) > 1 else DEFAULTFILENAME
 
 class Opcode(IntEnum):
