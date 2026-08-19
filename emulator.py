@@ -166,7 +166,10 @@ def check(program: list[tuple[str | None, list[int]]]):
     return problems
 
 reg = [0] * 8
-Bram = [0] * 256  # 256 words of 32 bits each
+IMEM_DEPTH = 4096   # 1 << IMEM_DEPTH_LOG2
+DMEM_DEPTH = 256    # 1 << DMEM_ADDR_WIDTH
+
+Bram = [0] * DMEM_DEPTH  # words of 32 bits each
 
 def load():
     decoded_instructions: list[tuple[None | str, list[int]]] = []
@@ -180,6 +183,10 @@ def load():
 
 step = 0
 program = load()
+if len(program) > IMEM_DEPTH:
+    raise SystemExit(
+        f"Program is {len(program)} instructions, but instruction memory holds only {IMEM_DEPTH}."
+    )
 seen_states: dict[tuple[int, tuple[int, ...]], int] = {}
 outputs:list[int] = []
 print("===== Disassembly =====")

@@ -13,6 +13,10 @@ from typing import Literal
 DEFAULTFILENAME = "program2.txt"
 filename = sys.argv[1] if len(sys.argv) > 1 else DEFAULTFILENAME
 
+IMEM_DEPTH = 4096   # 1 << IMEM_DEPTH_LOG2
+DMEM_DEPTH = 256    # 1 << DMEM_ADDR_WIDTH
+MMIO_BASE  = 65500  # at or above this, STORE writes to a device, not memory
+
 class Opcode(IntEnum):
     NOP    = 0
     ADD    = 1
@@ -135,6 +139,16 @@ def parse_operand(arg: int | str, data: tuple[DataType, int]) -> int:
 
     if not (0 <= num <= (1 << width) - 1): # (2 ** width) - 1 
         raise ValueError(f"Immediate value {num} out of range.")
+
+    if field_type == "BRAM" and num >= DMEM_DEPTH and num < MMIO_BASE:
+        raise ValueError(
+            f"Data address {num} is past the end of data memory (0-{DMEM_DEPTH - 1}) and below the I/O base ({MMIO_BASE})."
+        )
+
+    if field_type == "LABEL" and num >= IMEM_DEPTH:
+        raise ValueError(
+            f"Jump target {num} is past the end of instruction memory (0-{IMEM_DEPTH - 1})."
+        )
     return num
 
 def make_reporter(filename, line_num, line_text):
@@ -218,6 +232,11 @@ with open(filename, "r", encoding="utf-8") as f:
         encode(opcode, args)
 
 print(compiled_instruction)
+
+if len(compiled_instruction) > IMEM_DEPTH:
+    raise SystemExit(
+        f"Program is {len(compiled_instruction)} instructions, but instruction memory holds only {IMEM_DEPTH}."
+    )
 
 with open("ex1.mem", "w", encoding="utf-8") as f:
     f.writelines(i + "\n" for i in compiled_instruction)
