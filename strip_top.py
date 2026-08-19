@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""Remove Verilator's synthetic `TOP` wrapper scope from a VCD.
-
-Verilator nests the design under an extra `TOP` scope, so signals appear as
-TOP.CPU_tb.top_inst.foo. Save files written against dumps without that wrapper
-(e.g. from another simulator) then match nothing and GTKWave shows a blank
-signal pane. Dropping the wrapper makes the hierarchy start at CPU_tb.
-"""
 import sys
 
 path = sys.argv[1] if len(sys.argv) > 1 else "wave.vcd"
