@@ -1,5 +1,7 @@
 # RC16
-This repository hosts the code for a custom CPU written with hardware description language Verilog, designed for education purposes. Inspired by computer architecture and hardware design courses in university, this project aims to design a minimal but functional version of the CPU architecture: Fetch, Decode, Execute, RAM LOAD/STORE and Register WRITEBACK. The instructions are stored in ROM. This is built and designed completely from scratch by `ChinHongTan` and `wifekurumi`, over a span of 3 weeks in our summer vacation, as an interesting side project after our year 1 university courses.
+This repository hosts the code for a custom CPU written with hardware description language Verilog, designed for education purposes. Inspired by computer architecture and hardware design courses in university, this project aims to design a minimal but functional version of the CPU architecture: Fetch, Decode, Execute, RAM LOAD/STORE and Register WRITEBACK. The instructions are stored in ROM. 
+
+This is built and designed completely from scratch by `ChinHongTan` and `wifekurumi`, over a span of 3 weeks in our summer vacation, as an interesting side project after our year 1 university courses.
 
 In its current form, it is a 5-stage pipelined 16-bit RISC processor with hardware data forwarding and hazard interlocks, implemented on a Xilinx Artix-7 FPGA board. The design used Harvard architecture and 2R1W register file. The Harvard architecture avoids the fetch-vs-memory hazard while 2R1W avoids the register-port hazard.
 
