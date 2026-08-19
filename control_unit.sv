@@ -102,7 +102,7 @@ module control_unit(
 
     wire write_signal = (opcode == OP_STORE || opcode == OP_STORER);
     wire read_signal = (opcode == OP_LOAD || opcode == OP_LOADR);
-    wire same = (RAM_addr_prev == Data2_de[7:0]);
+    wire same = (RAM_addr_prev == Data2_de[`DMEM_ADDR_WIDTH - 1:0]);
     always_ff @(posedge clk or negedge rst_n) begin : RAM_write_stage
         write_prev <= false;
         if (!rst_n) begin
@@ -110,10 +110,10 @@ module control_unit(
             write_prev    <= false;
         end else if (!pause && !clear_op) begin
             if (write_signal) begin
-                RAM_addr_prev <= regData2[7:0];
+                RAM_addr_prev <= regData2[`DMEM_ADDR_WIDTH - 1:0];
                 write_prev <= true;
             end else if (read_signal) begin
-                RAM_addr_prev <= regData2[7:0];
+                RAM_addr_prev <= regData2[`DMEM_ADDR_WIDTH - 1:0];
             end
         end
     end

@@ -20,12 +20,15 @@
 	} RW;
 
 	// MARK: RAM
-	`define ADDR_WIDTH 8
+    `define IMEM_ADDR_WIDTH 16   // architectural PC width
+    `define IMEM_DEPTH_LOG2 12   // physical instruction memory: 4096 words
+    `define DMEM_ADDR_WIDTH 8
 	`define DATA_WIDTH 32
 	`define MEM_INIT_FILE "ex1.mem"
 
 	typedef logic [`DATA_WIDTH - 1:0] RAM_Data;	
-	typedef logic [`ADDR_WIDTH - 1:0] RAM_Address;
+    typedef logic [`IMEM_ADDR_WIDTH - 1:0] Instr_Address;
+	typedef logic [`DMEM_ADDR_WIDTH - 1:0] RAM_Address;
 
 	// MARK: Instructions
 	typedef enum logic [4:0] {
@@ -74,11 +77,6 @@
 
 	`define MAX(a, b) (((a) > (b)) ? (a) : (b))
 	`define MIN(a, b) (((a) < (b)) ? (a) : (b))
-
-    /** return 255 if overflow */
-    function automatic [7:0] overflow_16to8b(input [15:0] a);
-        return (|a[15:8]) ? 8'hFF : a[7:0]; 
-    endfunction
 
 	`define isSigned 0
 

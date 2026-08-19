@@ -37,8 +37,17 @@ module top(
     RW [2:0] write_enable /*verilator split_var*/;
 
     // IR (ROM)
-    RAM_Address pc;                             // address of next instructionAM
-    assign led[7:0] = pc;
+    Instr_Address pc;                             // address of next instructionAM
+    assign led[15:0] = pc;
+
+    `ifdef SIM_SPEEDUP
+        // PC is architecturally 16-bit, but instruction memory is only 12-bits deep
+        always @(posedge clk_main) begin : imem_range_check
+            if (rst_n && |pc[`IMEM_ADDR_WIDTH - 1:`IMEM_DEPTH_LOG2])
+                $fatal(1, "pc=%0d exceeds instruction memory depth %0d",
+                       pc, 1 << `IMEM_DEPTH_LOG2);
+        end
+    `endif
 
     // RAM (data)
     RAM_Data command;                           // instruction register fetched from BR
@@ -62,11 +71,14 @@ module top(
         .data_in(data_in[2])
     );
 
-    BRAM fetch( // Instruction
+    BRAM #(
+        .ADDR_W(`IMEM_DEPTH_LOG2),
+        .INIT_FILE(`MEM_INIT_FILE)
+    ) fetch( // Instruction
         .clk,
         .pause,
         .write(READ),
-        .address(pc),
+        .address(pc[`IMEM_DEPTH_LOG2 - 1:0]),
         .in(32'b0),
         .out(command)
     );
@@ -224,18 +236,18 @@ module top(
                         in0 <= 4'(32'(Data1 % 10));
                     end else begin
                         RAM_in <= {16'b0, Data1}; // RegData1
-                        RAM_addr <= Data2[7:0];   // imm
+                        RAM_addr <= Data2[`DMEM_ADDR_WIDTH - 1:0];   // imm
                     end
                 end
 
                 STORER: begin
                     RAM_in <= {16'b0, Data1}; // RegData1
-                    RAM_addr <= Data2[7:0];   // RegData2
+                    RAM_addr <= Data2[`DMEM_ADDR_WIDTH - 1:0];   // RegData2
                 end
 
                 LOAD: begin
                     RAM_in <= {16'b0, Data1}; // RegData1
-                    RAM_addr <= Data2[7:0];   // RegData2/imm
+                    RAM_addr <= Data2[`DMEM_ADDR_WIDTH - 1:0];   // RegData2/imm
                 end
 
                 HALT: begin
@@ -245,7 +257,7 @@ module top(
 
                 JUMP: begin
                     if (jump_condition) begin
-                        pc <= overflow_16to8b(jump_target);
+                        pc <= jump_target;
                         after_jump_lock <= 1;
                         clear_op <= true;
                         if (jal) begin
