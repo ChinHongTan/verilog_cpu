@@ -1,4 +1,4 @@
-
+# RC16
 This repository hosts the code for a custom CPU written with hardware description language Verilog, designed for education purposes. Inspired by computer architecture and hardware design courses in university, this project aims to design a minimal but functional version of the CPU architecture: Fetch, Decode, Execute, RAM LOAD/STORE and Register WRITEBACK. The instructions are stored in ROM. This is built and designed completely from scratch by `ChinHongTan` and `wifekurumi`, over a span of 3 weeks in our summer vacation, as an interesting side project after our year 1 university courses.
 
 In its current form, it is a 5-stage pipelined 16-bit RISC processor with hardware data forwarding and hazard interlocks, implemented on a Xilinx Artix-7 FPGA board. The design used Harvard architecture and 2R1W register file. The Harvard architecture avoids the fetch-vs-memory hazard while 2R1W avoids the register-port hazard.
@@ -15,13 +15,99 @@ In testings, it can calculate prime numbers under 10000 in around 1.1 seconds at
 - **Memory Mapped I/O**: Addresses at and above 65500 are reserved for I/O devices, so the CPU can handle a lot more I/O devices and doesn't need new opcodes.
 
 ## Architecture
-- Fetch
-- Decode
-- Execute
-- RAM LOAD/STORE
-- Register WRITEBACK
+
+| | |
+|---|---|
+| Data width | 16-bit registers and ALU |
+| Instruction width | 32-bit fixed (30 used, 2 reserved) |
+| Registers | 8 × 16-bit, 2R1W (`R0`–`R7`) |
+| Program counter | 16-bit |
+| Instruction memory | 4096 words, Harvard, read-only |
+| Data memory | 256 × 32-bit |
+| Instructions | 28 |
+| Clock | 25 MHz on Artix-7 XC7A35T-1 |
+
+Instructions move through five stages, one stage per clock:
+
+```mermaid
+flowchart LR
+    IF["Fetch<br/>instruction BRAM"] --> ID["Decode<br/>control_unit.sv"]
+    ID --> EX["Execute<br/>ALU.sv"]
+    EX --> MEM["Memory<br/>data BRAM"]
+    MEM --> WB["Writeback<br/>Registers.sv"]
+    EX -. "result forwarded" .-> ID
+    WB -. "result forwarded" .-> ID
+```
+
+The full datapath, including where operands come from and how the display is
+driven:
+
+```mermaid
+flowchart LR
+    subgraph F["Fetch"]
+        PC["PC<br/>16-bit"] --> IMEM[("Instruction BRAM<br/>4096 × 32")]
+    end
+    subgraph D["Decode"]
+        CU["control_unit.sv"] --> REG["Registers.sv<br/>8 × 16-bit, 2R1W"]
+    end
+    subgraph E["Execute"]
+        FWD{"forwarding<br/>mux"} --> ALU["ALU.sv"]
+    end
+    subgraph M["Memory"]
+        MEMS["memory.sv"] --> DMEM[("Data BRAM<br/>256 × 32")]
+    end
+    subgraph W["Writeback"]
+        WBS["register write"]
+    end
+    IMEM --> CU
+    REG --> FWD
+    ALU --> MEMS
+    MEMS --> WBS
+    WBS --> REG
+    MEMS --> SEG["seg_four.v<br/>7-segment"]
+    ALU -. "EX result" .-> FWD
+    WBS -. "WB result" .-> FWD
+    CU -. "jump target, stall" .-> PC
+```
+
+### Hazard handling
+
+TODO
 
 ## Repo Structure
+
+**Source files**
+
+| File | Role |
+|---|---|
+| [top.sv](top.sv) | Top module: PC, pipeline registers, forwarding mux, execute stage |
+| [top.svh](top.svh) | Shared types, memory widths, opcode enum |
+| [control_unit.sv](control_unit.sv) | Decode stage, control signals, hazard control |
+| [ALU.sv](ALU.sv) / [ALU_Pkg.sv](ALU_Pkg.sv) | ALU and its mode enum |
+| [Registers.sv](Registers.sv) | 2R1W register file |
+| [BRAM.sv](BRAM.sv) | Parameterised block RAM, instantiated for both memories |
+| [memory.sv](memory.sv) | Memory stage and data-BRAM wrapper |
+| [seg_four.v](seg_four.v) | 4-digit 7-segment display driver |
+| [to1Hz.sv](to1Hz.sv) | Clock divider for on-board stepping |
+| [XDC_USE.xdc](XDC_USE.xdc) | Pin constraints for the Artix-7 board |
+
+**Toolchain**
+
+| File | Role |
+|---|---|
+| [assembler.py](assembler.py) | Assembles the custom assembly language to `ex1.mem` |
+| [emulator.py](emulator.py) | Instruction-accurate reference model and static checker |
+| [pipeline.py](pipeline.py) | Pipeline visualiser built on the emulator |
+| [strip_top.py](strip_top.py) | Removes Verilator's wrapper scope from the VCD |
+
+**Verification and programs**
+
+| File | Role |
+|---|---|
+| [CPU_tb.sv](CPU_tb.sv) / [BRAM_tb.sv](BRAM_tb.sv) | Testbenches |
+| [command_for_TB](command_for_TB) | Simulation command lines |
+| [program1.txt](program1.txt) / [program2.txt](program2.txt) | Fibonacci and prime demos |
+| [ISA.md](ISA.md) | Full instruction set reference |
 
 ## Setup
 ### Requirements
@@ -54,3 +140,6 @@ Here are some goals that we planned, but might not get implemented due to time c
 - **Better assembler support**: The assembler now only reads custom assembly language, and does not include optimisation for code to minimise hazards. We might add in custom C-like syntax language and a compiler in the future.
 
 ## References
+
+- [Initialize Memory in Verilog](https://projectf.io/posts/initialize-memory-in-verilog/) — Project F, on `$readmemh`/`$readmemb` and BRAM initialisation.
+- [Understanding FPGA BRAM](https://medium.com/@u22ec101/understanding-fpga-bram-simulating-initializing-and-dumping-memory-in-verilog-71105f2d10dd) — simulating, initialising and dumping memory in Verilog.
