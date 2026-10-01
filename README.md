@@ -145,3 +145,7 @@ Here are some goals that we planned, but might not get implemented due to time c
 
 - [Initialize Memory in Verilog](https://projectf.io/posts/initialize-memory-in-verilog/) — Project F, on `$readmemh`/`$readmemb` and BRAM initialisation.
 - [Understanding FPGA BRAM](https://medium.com/@u22ec101/understanding-fpga-bram-simulating-initializing-and-dumping-memory-in-verilog-71105f2d10dd) — simulating, initialising and dumping memory in Verilog.
+
+## License
+
+This project is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE) for the full text.
